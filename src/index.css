@@ -1,1 +1,45 @@
 @import "tailwindcss";
+
+@layer utilities {
+  /* Prevent horizontal scrolling glitches on mobile */
+  body {
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+}
+
+/* Custom print CSS for crisp document PDF printing */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide app navigation chrome during print */
+  header,
+  aside,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Expand print canvas */
+  main,
+  .print-area {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .bg-zinc-950,
+  .bg-zinc-900,
+  .bg-black {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+}

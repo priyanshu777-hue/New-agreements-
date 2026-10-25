@@ -296,19 +296,19 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
           </p>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto">
           <button
             onClick={handleSelectAllSigned}
-            className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-3 py-2.5 rounded-xl border border-zinc-700 transition-colors"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold min-h-[44px] px-3.5 py-2.5 rounded-xl border border-zinc-700 transition-colors active:scale-95"
             title="Select all executed signed agreements"
           >
-            <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+            <CheckSquare className="w-4 h-4 text-emerald-400" />
             <span>Select All Signed</span>
           </button>
 
           <button
             onClick={onOpenNewAgreementModal}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-lg shadow-red-950 active:scale-95 transition-all shrink-0"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs min-h-[44px] px-4 py-2.5 rounded-xl shadow-lg shadow-red-950 active:scale-95 transition-all shrink-0"
           >
             <Plus className="w-4 h-4" />
             <span>Create New MOU</span>
@@ -318,9 +318,9 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
 
       {/* Bulk Action Sticky Toolbar (When items are selected) */}
       {selectedIds.length > 0 && (
-        <div className="bg-gradient-to-r from-red-950/90 via-zinc-900 to-zinc-950 border-2 border-red-600/80 p-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-200">
+        <div className="bg-gradient-to-r from-red-950/90 via-zinc-900 to-zinc-950 border-2 border-red-600/80 p-4 rounded-2xl shadow-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-in slide-in-from-top-2 duration-200">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
+            <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-sm shadow-md shrink-0">
               {selectedIds.length}
             </div>
             <div>
@@ -333,18 +333,18 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setSelectedIds([])}
-              className="text-xs text-zinc-400 hover:text-white px-3 py-2 rounded-xl hover:bg-zinc-800 transition-colors"
+              className="text-xs text-zinc-400 hover:text-white min-h-[44px] px-3.5 py-2.5 rounded-xl hover:bg-zinc-800 transition-colors"
             >
-              Clear Selection
+              Clear
             </button>
 
             <button
               onClick={handleBulkDownloadZip}
               disabled={isDownloading}
-              className="flex items-center gap-2 bg-gradient-to-r from-red-700 via-red-600 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xl shadow-red-950 active:scale-95 transition-all"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 via-red-600 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-bold text-xs min-h-[44px] px-4 py-2.5 rounded-xl shadow-xl shadow-red-950 active:scale-95 transition-all"
             >
               {isDownloading ? (
                 <>
@@ -354,7 +354,7 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
               ) : (
                 <>
                   <FileArchive className="w-4 h-4" />
-                  <span>Export Bulk ZIP Package ({selectedIds.length})</span>
+                  <span>Export Bulk ZIP ({selectedIds.length})</span>
                 </>
               )}
             </button>
@@ -363,26 +363,26 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
       )}
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-900/60 border border-zinc-800/80 p-3 rounded-xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-900/60 border border-zinc-800/80 p-3 rounded-2xl">
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-2.5" />
+          <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search by ID, client, address..."
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
+            className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] pl-9 pr-3 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-red-500"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto overflow-x-auto scrollbar-none py-1">
           {['ALL', 'Awaiting Signature', 'Signed', 'Viewed', 'Inactive'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`min-h-[44px] px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all shrink-0 active:scale-95 ${
                 statusFilter === st
-                  ? 'bg-red-600 text-white shadow'
+                  ? 'bg-red-600 text-white shadow font-bold'
                   : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800'
               }`}
             >
@@ -489,38 +489,38 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => onPreviewAgreement(agr)}
-                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors active:scale-95"
                             title="Preview Document & Audit Trail"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye className="w-4 h-4" />
                           </button>
 
                           <button
                             onClick={() => handleCopyLink(agr)}
-                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors active:scale-95"
                             title="Copy Public Sign Link"
                           >
                             {copiedId === agr.id ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <Check className="w-4 h-4 text-emerald-400" />
                             ) : (
-                              <Copy className="w-3.5 h-3.5" />
+                              <Copy className="w-4 h-4" />
                             )}
                           </button>
 
                           <button
                             onClick={() => onSendEmailReminder(agr)}
-                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200"
+                            className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 transition-colors active:scale-95"
                             title="Send Email Reminder"
                           >
-                            <Mail className="w-3.5 h-3.5 text-red-400" />
+                            <Mail className="w-4 h-4 text-red-400" />
                           </button>
 
                           <button
                             onClick={() => onOpenSigningPortal(agr)}
-                            className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg"
+                            className="flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold min-h-[44px] px-3.5 py-2 rounded-xl active:scale-95 shadow"
                           >
                             <span>Sign</span>
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>

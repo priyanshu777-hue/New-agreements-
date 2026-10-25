@@ -11,7 +11,8 @@ import { ReportsView } from './components/reports/ReportsView';
 import { EmailLogsView } from './components/email/EmailLogsView';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { GlobalSearchModal } from './components/common/GlobalSearchModal';
-import { TemplateChatbot, GeneratedTemplateData } from './components/chat/TemplateChatbot';
+import { TemplateChatbot } from './components/chat/TemplateChatbot';
+import { LeadDetailDrawer } from './components/leads/LeadDetailDrawer';
 
 import {
   INITIAL_LEADS,
@@ -28,7 +29,7 @@ export default function App() {
   const isDirectSignLink = path.startsWith('/sign/');
   const directSignAgrId = isDirectSignLink ? path.split('/sign/')[1] : null;
 
-  // Single Authentication state
+  // Authentication state
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('rfh_authenticated') === 'true';
   });
@@ -61,9 +62,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_EMAIL_LOGS;
   });
 
-  // UI Navigation states
+  // UI Navigation & Selection states
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [isAgreementGeneratorOpen, setIsAgreementGeneratorOpen] = useState(false);
+  const [selectedLeadForAgreement, setSelectedLeadForAgreement] = useState<Lead | null>(null);
+  const [selectedLeadForDrawer, setSelectedLeadForDrawer] = useState<Lead | null>(null);
   const [previewAgreement, setPreviewAgreement] = useState<AgreementData | null>(null);
 
   const [isSigningPortalActive, setIsSigningPortalActive] = useState<boolean>(isDirectSignLink);
@@ -108,11 +111,43 @@ export default function App() {
     localStorage.setItem('rfh_authenticated', 'false');
   };
 
+  // Open Agreement Generator from any view
+  const handleOpenAgreementGenerator = (lead?: Lead | null) => {
+    setSelectedLeadForAgreement(lead || null);
+    setIsAgreementGeneratorOpen(true);
+    setActiveTab('agreements');
+    if (selectedLeadForDrawer) {
+      setSelectedLeadForDrawer(null);
+    }
+  };
+
+  // Lead Operations
+  const handleUpdateLead = (updatedLead: Lead) => {
+    setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+    if (selectedLeadForDrawer?.id === updatedLead.id) {
+      setSelectedLeadForDrawer(updatedLead);
+    }
+  };
+
+  const handleDeleteLead = (leadId: string) => {
+    setLeads((prev) => prev.filter((l) => l.id !== leadId));
+    setSelectedLeadForDrawer(null);
+  };
+
   // MOU Agreement Operations
   const handleGenerateAgreement = (newAgreement: AgreementData) => {
     setAgreements([newAgreement, ...agreements]);
     setIsAgreementGeneratorOpen(false);
     setPreviewAgreement(newAgreement);
+
+    // If generated for a lead, update lead's stage to "Agreement Sent"
+    if (newAgreement.leadId) {
+      setLeads((prevLeads) =>
+        prevLeads.map((l) =>
+          l.id === newAgreement.leadId ? { ...l, stage: 'Agreement Sent' } : l
+        )
+      );
+    }
 
     const newNotif: SystemNotification = {
       id: `notif_${Date.now()}`,
@@ -131,7 +166,14 @@ export default function App() {
     const updatedAgreements = agreements.map((a) => (a.id === signedAgr.id ? signedAgr : a));
     setAgreements(updatedAgreements);
 
-    // Email to Client & hello@redflaghomes.in
+    // Also update associated lead stage to "Signed" or "Onboarded"
+    if (signedAgr.leadId) {
+      setLeads((prev) =>
+        prev.map((l) => (l.id === signedAgr.leadId ? { ...l, stage: 'Signed' } : l))
+      );
+    }
+
+    // Email Logs
     const clientEmailLog: EmailLog = {
       id: `email_${Date.now()}`,
       sender: 'agreements@redflaghomes.in',
@@ -156,7 +198,7 @@ export default function App() {
       attachments: ['Signed_MOU_Agreement.pdf', `Audit_Certificate_${auditTrail.certificateId}.pdf`],
     };
 
-    setEmailLogs([clientEmailLog, onboardingEmailLog, ...emailLogs]);
+    setEmailLogs((prev) => [clientEmailLog, onboardingEmailLog, ...prev]);
 
     const notif: SystemNotification = {
       id: `notif_${Date.now()}`,
@@ -167,7 +209,7 @@ export default function App() {
       agreementId: signedAgr.id,
       read: false,
     };
-    setNotifications([notif, ...notifications]);
+    setNotifications((prev) => [notif, ...prev]);
   };
 
   const handleOpenSigningPortalForAgreement = (agr: AgreementData) => {
@@ -241,8 +283,8 @@ export default function App() {
         currentUser={currentUser}
         onRoleChange={(role) => setCurrentUser({ ...currentUser, role })}
         onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
-        onOpenNewLeadModal={() => setIsAgreementGeneratorOpen(true)}
-        onOpenNewAgreementModal={() => setIsAgreementGeneratorOpen(true)}
+        onOpenNewLeadModal={() => handleOpenAgreementGenerator(null)}
+        onOpenNewAgreementModal={() => handleOpenAgreementGenerator(null)}
         notifications={notifications}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
         staffList={staffList}
@@ -268,15 +310,15 @@ export default function App() {
         />
 
         {/* Viewport Canvas */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-zinc-950/60">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 bg-zinc-950/60 pb-20 md:pb-6">
           {activeTab === 'dashboard' && (
             <DashboardOverview
               leads={leads}
               agreements={agreements}
               staffList={staffList}
-              onSelectLead={() => {}}
-              onOpenNewLead={() => setIsAgreementGeneratorOpen(true)}
-              onOpenNewAgreement={() => setIsAgreementGeneratorOpen(true)}
+              onSelectLead={(lead) => setSelectedLeadForDrawer(lead)}
+              onOpenNewLead={() => handleOpenAgreementGenerator(null)}
+              onOpenNewAgreement={() => handleOpenAgreementGenerator(null)}
               onNavigateToTab={(tab) => {
                 if (tab === 'agreements' || tab === 'reports' || tab === 'sign-portal') {
                   setActiveTab(tab);
@@ -292,15 +334,18 @@ export default function App() {
             <div className="space-y-6">
               {isAgreementGeneratorOpen ? (
                 <AgreementGenerator
-                  selectedLead={null}
+                  selectedLead={selectedLeadForAgreement}
                   staffList={staffList}
                   onGenerateAgreement={handleGenerateAgreement}
-                  onClose={() => setIsAgreementGeneratorOpen(false)}
+                  onClose={() => {
+                    setIsAgreementGeneratorOpen(false);
+                    setSelectedLeadForAgreement(null);
+                  }}
                 />
               ) : (
                 <AgreementList
                   agreements={agreements}
-                  onOpenNewAgreementModal={() => setIsAgreementGeneratorOpen(true)}
+                  onOpenNewAgreementModal={() => handleOpenAgreementGenerator(null)}
                   onPreviewAgreement={(a) => setPreviewAgreement(a)}
                   onOpenSigningPortal={handleOpenSigningPortalForAgreement}
                   onSendEmailReminder={(a) => handleTriggerTestEmail(a.partyAEmail || a.salesExecutiveEmail, `Reminder: ${a.title}`, a.id)}
@@ -339,7 +384,18 @@ export default function App() {
         </main>
       </div>
 
-      {/* Modals & Slide-over Drawers */}
+      {/* Lead Detail Drawer */}
+      {selectedLeadForDrawer && (
+        <LeadDetailDrawer
+          lead={selectedLeadForDrawer}
+          onClose={() => setSelectedLeadForDrawer(null)}
+          onUpdateLead={handleUpdateLead}
+          onDeleteLead={handleDeleteLead}
+          onOpenAgreementForLead={(lead) => handleOpenAgreementGenerator(lead)}
+        />
+      )}
+
+      {/* Modals & Drawers */}
       <AgreementPreviewModal
         agreement={previewAgreement}
         onClose={() => setPreviewAgreement(null)}
@@ -362,8 +418,14 @@ export default function App() {
         onClose={() => setIsGlobalSearchOpen(false)}
         leads={leads}
         agreements={agreements}
-        onSelectLead={() => {}}
-        onSelectAgreement={(a) => setPreviewAgreement(a)}
+        onSelectLead={(lead) => {
+          setIsGlobalSearchOpen(false);
+          setSelectedLeadForDrawer(lead);
+        }}
+        onSelectAgreement={(a) => {
+          setIsGlobalSearchOpen(false);
+          setPreviewAgreement(a);
+        }}
       />
     </div>
   );

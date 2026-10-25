@@ -32,6 +32,7 @@ export const OFFICIAL_PAYMENT_QR_URL =
 import { AgreementData, AuditTrail, AssetDetail } from '../../types/crm';
 import { renderMouText } from '../../utils/mouTemplate';
 import { createAuditCertificate, getClientIp, generateQrCodeDataUrl } from '../../utils/auditTrail';
+import { downloadMouPdf, downloadAuditCertificatePdf } from '../../utils/pdfGenerator';
 import { RedFlagLogo, DigitalCompanySeal, DocumentAuditStamp } from '../common/RedFlagLogo';
 
 interface PublicSigningPortalProps {
@@ -445,38 +446,38 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
       {/* Main Stepper Container */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
         {/* Step Progression Bar */}
-        <div className="grid grid-cols-5 gap-1.5 bg-zinc-900 border border-zinc-800 p-2 rounded-2xl text-center text-[11px] font-semibold">
+        <div className="flex sm:grid sm:grid-cols-5 gap-1.5 bg-zinc-900 border border-zinc-800 p-2 rounded-2xl text-center text-[10px] sm:text-[11px] font-semibold overflow-x-auto snap-x scrollbar-none">
           <div
-            className={`py-2 rounded-xl transition-all ${
-              step === 'details' ? 'bg-red-600 text-white shadow' : 'bg-zinc-950 text-zinc-400'
+            className={`py-2 px-2 rounded-xl transition-all shrink-0 snap-start min-w-[100px] sm:min-w-0 ${
+              step === 'details' ? 'bg-red-600 text-white shadow font-bold' : 'bg-zinc-950 text-zinc-400'
             }`}
           >
             1. Client & Assets
           </div>
           <div
-            className={`py-2 rounded-xl transition-all ${
-              step === 'selfie' ? 'bg-red-600 text-white shadow' : 'bg-zinc-950 text-zinc-400'
+            className={`py-2 px-2 rounded-xl transition-all shrink-0 snap-start min-w-[100px] sm:min-w-0 ${
+              step === 'selfie' ? 'bg-red-600 text-white shadow font-bold' : 'bg-zinc-950 text-zinc-400'
             }`}
           >
             2. Live Selfie
           </div>
           <div
-            className={`py-2 rounded-xl transition-all ${
-              step === 'payment' ? 'bg-red-600 text-white shadow' : 'bg-zinc-950 text-zinc-400'
+            className={`py-2 px-2 rounded-xl transition-all shrink-0 snap-start min-w-[100px] sm:min-w-0 ${
+              step === 'payment' ? 'bg-red-600 text-white shadow font-bold' : 'bg-zinc-950 text-zinc-400'
             }`}
           >
             3. Onboarding Fee
           </div>
           <div
-            className={`py-2 rounded-xl transition-all ${
-              step === 'review' ? 'bg-red-600 text-white shadow' : 'bg-zinc-950 text-zinc-400'
+            className={`py-2 px-2 rounded-xl transition-all shrink-0 snap-start min-w-[100px] sm:min-w-0 ${
+              step === 'review' ? 'bg-red-600 text-white shadow font-bold' : 'bg-zinc-950 text-zinc-400'
             }`}
           >
             4. Read MOU
           </div>
           <div
-            className={`py-2 rounded-xl transition-all ${
-              step === 'sign' || step === 'completed' ? 'bg-red-600 text-white shadow' : 'bg-zinc-950 text-zinc-400'
+            className={`py-2 px-2 rounded-xl transition-all shrink-0 snap-start min-w-[100px] sm:min-w-0 ${
+              step === 'sign' || step === 'completed' ? 'bg-red-600 text-white shadow font-bold' : 'bg-zinc-950 text-zinc-400'
             }`}
           >
             5. E-Sign & Seal
@@ -1239,7 +1240,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
               {/* PDF Download Direct Actions Bar */}
               <div className="flex flex-wrap items-center justify-center gap-3 pt-3 relative z-10">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => downloadMouPdf(agreement, finalAuditTrail)}
                   className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-2xl shadow-red-950 transition-all active:scale-95"
                 >
                   <Download className="w-4 h-4" />
@@ -1247,7 +1248,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 </button>
 
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => finalAuditTrail && downloadAuditCertificatePdf(finalAuditTrail, agreement)}
                   className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl border border-zinc-700 transition-colors"
                 >
                   <Printer className="w-4 h-4 text-emerald-400" />
@@ -1412,7 +1413,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   Executed Signed Document Paper Preview
                 </span>
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => downloadMouPdf(agreement, finalAuditTrail)}
                   className="text-red-400 hover:text-red-300 font-bold underline flex items-center gap-1"
                 >
                   <Download className="w-3.5 h-3.5" />

@@ -7,10 +7,12 @@ import {
   ExternalLink,
   Mail,
   ShieldCheck,
+  Download,
 } from 'lucide-react';
 import { AgreementData } from '../../types/crm';
 import { renderMouText, RED_FLAG_HOMES_COMPANY_INFO } from '../../utils/mouTemplate';
 import { generateQrCodeDataUrl } from '../../utils/auditTrail';
+import { downloadMouPdf } from '../../utils/pdfGenerator';
 import { RedFlagLogo, DigitalCompanySeal } from '../common/RedFlagLogo';
 
 interface AgreementPreviewModalProps {
@@ -55,67 +57,57 @@ export const AgreementPreviewModal: React.FC<AgreementPreviewModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-4xl shadow-2xl flex flex-col my-auto max-h-[92vh] overflow-hidden">
-        {/* Modal Top Actions Header */}
-        <div className="p-4 border-b border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3 shrink-0 print:hidden">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-0 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+      {/* Full screen on mobile, modal container on desktop */}
+      <div className="bg-zinc-900 border-0 sm:border border-zinc-800 rounded-none sm:rounded-2xl w-full h-full sm:h-auto sm:max-w-4xl shadow-2xl flex flex-col my-0 sm:my-auto sm:max-h-[92vh] overflow-hidden">
+        {/* Modal Top Actions Header with 44px touch targets */}
+        <div className="p-3.5 sm:p-4 border-b border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-2 shrink-0 print:hidden">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-red-400 bg-red-950/80 px-2.5 py-1 rounded border border-red-800/40">
+            <span className="text-xs font-mono font-extrabold text-red-400 bg-red-950/80 px-2.5 py-1 rounded border border-red-800/40">
               {agreement.id}
             </span>
-            <span className="text-xs text-zinc-300 font-semibold truncate max-w-[200px] sm:max-w-xs">
+            <span className="text-xs text-zinc-300 font-bold truncate max-w-[140px] sm:max-w-xs">
               {agreement.title}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-1.5 rounded-xl border border-zinc-700 transition-colors"
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold min-h-[44px] px-3.5 py-2.5 rounded-xl border border-zinc-700 transition-colors active:scale-95"
             >
-              {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copiedLink ? 'Link Copied!' : 'Copy Signing Link'}</span>
+              {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              <span className="hidden xs:inline">{copiedLink ? 'Copied!' : 'Copy Link'}</span>
             </button>
 
             <button
               onClick={handleSendEmail}
-              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-1.5 rounded-xl border border-zinc-700 transition-colors"
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold min-h-[44px] px-3.5 py-2.5 rounded-xl border border-zinc-700 transition-colors active:scale-95"
             >
-              <Mail className="w-3.5 h-3.5 text-red-400" />
-              <span>{emailSentNotice ? 'Sent Email!' : 'Email Client'}</span>
+              <Mail className="w-4 h-4 text-red-400" />
+              <span>{emailSentNotice ? 'Sent!' : 'Email'}</span>
             </button>
 
-            <a
-              href={`mailto:${encodeURIComponent(agreement.partyAEmail || '')}?subject=${encodeURIComponent(
-                `Red Flag Homes Agreement - ${agreement.id}`
-              )}&body=${encodeURIComponent(
-                `Dear ${agreement.partyAName},\n\nPlease review and execute your Listing & Property Management Memorandum of Understanding with Red Flag Homes:\n${fullSignUrl}\n\nCorporate Office: Guru Marg, Paschim Vihar, New Delhi\nOfficial Desk: agreements@redflaghomes.in`
-              )}`}
-              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-2.5 py-1.5 rounded-xl border border-zinc-700 transition-colors"
-              title="Open in Mail Client"
-            >
-              <span>Mail App</span>
-            </a>
-
             <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-1.5 rounded-xl border border-zinc-700 transition-colors"
+              onClick={() => downloadMouPdf(agreement, agreement.auditTrail)}
+              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold min-h-[44px] px-3.5 py-2.5 rounded-xl border border-zinc-700 transition-colors active:scale-95"
             >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print PDF</span>
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>PDF</span>
             </button>
 
             <button
               onClick={() => onOpenSigningPortal(agreement)}
-              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-1.5 rounded-xl transition-all shadow-md shadow-red-950"
+              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs min-h-[44px] px-4 py-2.5 rounded-xl transition-all shadow-md shadow-red-950 active:scale-95"
             >
-              <ExternalLink className="w-3.5 h-3.5" />
-              <span>Open Signing Portal</span>
+              <ExternalLink className="w-4 h-4" />
+              <span>Sign Portal</span>
             </button>
 
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors active:scale-95"
+              aria-label="Close Preview"
             >
               <X className="w-5 h-5" />
             </button>
@@ -123,10 +115,10 @@ export const AgreementPreviewModal: React.FC<AgreementPreviewModalProps> = ({
         </div>
 
         {/* Printable Formal Document Preview Container */}
-        <div className="flex-1 overflow-y-auto p-6 sm:p-10 bg-white text-zinc-900 font-sans selection:bg-red-200 shadow-inner relative border-8 border-double border-zinc-200 m-2 sm:m-4 rounded-xl">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-10 bg-white text-zinc-900 font-sans selection:bg-red-200 shadow-inner relative border-4 sm:border-8 border-double border-zinc-200 m-2 sm:m-4 rounded-xl">
           {/* Watermark */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03] rotate-[-30deg]">
-            <span className="text-8xl font-black tracking-widest text-zinc-900 uppercase">
+            <span className="text-6xl sm:text-8xl font-black tracking-widest text-zinc-900 uppercase">
               RED FLAG HOMES
             </span>
           </div>

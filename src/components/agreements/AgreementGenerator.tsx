@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  FileSignature,
   User,
   Phone,
   Send,
   Sparkles,
-  ShieldCheck,
   Copy,
   Check,
   ExternalLink,
@@ -160,7 +158,7 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
   };
 
   return (
-    <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-6 shadow-2xl max-w-xl mx-auto space-y-6 animate-in fade-in duration-150">
+    <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-2xl max-w-xl mx-auto space-y-5 animate-in fade-in duration-150">
       {/* Header Banner */}
       <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
         <RedFlagLogo size="sm" />
@@ -172,22 +170,22 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
       {!createdAgreement ? (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1">
-            <h2 className="text-base font-extrabold text-white">Issue Client Agreement Signing Link</h2>
-            <p className="text-xs text-zinc-400">
+            <h2 className="text-base sm:text-lg font-extrabold text-white">Issue Client Agreement Signing Link</h2>
+            <p className="text-xs text-zinc-400 leading-relaxed">
               Select an agreement template or create a new custom template. Enter client details to generate an <strong>Inactive</strong> signing link.
             </p>
           </div>
 
           {/* Agreement Template Selector */}
           <div className="space-y-2 p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <label className="block text-xs font-bold text-red-400 uppercase tracking-wider">
                 Select Agreement Template
               </label>
               <button
                 type="button"
                 onClick={() => setShowAddTemplate(!showAddTemplate)}
-                className="text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 bg-red-950/80 px-2.5 py-1 rounded-lg border border-red-800/40"
+                className="text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-1 bg-red-950/80 px-2.5 py-1.5 rounded-lg border border-red-800/40 min-h-[36px] active:scale-95"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>{showAddTemplate ? 'Cancel' : '+ Add New Template'}</span>
@@ -202,55 +200,55 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
                 </span>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 mb-1">Template Title *</label>
+                  <label className="block text-[10px] text-zinc-400 mb-1 font-semibold">Template Title *</label>
                   <input
                     type="text"
                     required
                     value={newTemplateTitle}
                     onChange={(e) => setNewTemplateTitle(e.target.value)}
                     placeholder="e.g. Luxury Villa Co-Hosting Agreement"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] p-2.5 text-xs text-white"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] text-zinc-400 mb-1">Owner Share %</label>
+                    <label className="block text-[10px] text-zinc-400 mb-1 font-semibold">Owner Share %</label>
                     <input
                       type="number"
                       required
                       value={newTemplateOwnerPercent}
                       onChange={(e) => setNewTemplateOwnerPercent(Number(e.target.value))}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white font-mono"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] p-2.5 text-xs text-white font-mono"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] text-zinc-400 mb-1">Red Flag Share %</label>
+                    <label className="block text-[10px] text-zinc-400 mb-1 font-semibold">Red Flag Share %</label>
                     <input
                       type="number"
                       required
                       value={newTemplateCommissionPercent}
                       onChange={(e) => setNewTemplateCommissionPercent(Number(e.target.value))}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white font-mono"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] p-2.5 text-xs text-white font-mono"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-zinc-400 mb-1">Description / Custom Terms</label>
+                  <label className="block text-[10px] text-zinc-400 mb-1 font-semibold">Description / Custom Terms</label>
                   <input
                     type="text"
                     value={newTemplateDescription}
                     onChange={(e) => setNewTemplateDescription(e.target.value)}
                     placeholder="Brief description of commercial terms"
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] p-2.5 text-xs text-white"
                   />
                 </div>
 
                 <button
                   type="button"
                   onClick={handleCreateNewTemplate}
-                  className="w-full py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-lg shadow"
+                  className="w-full min-h-[44px] py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl shadow active:scale-95"
                 >
                   Save & Select Template
                 </button>
@@ -259,7 +257,7 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
               <select
                 value={selectedTemplateId}
                 onChange={(e) => setSelectedTemplateId(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white font-medium focus:outline-none focus:border-red-500"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl min-h-[44px] p-2.5 text-xs text-white font-medium focus:outline-none focus:border-red-500"
               >
                 {templates.map((tpl) => (
                   <option key={tpl.id} value={tpl.id}>
@@ -280,14 +278,14 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
               Client Name *
             </label>
             <div className="relative">
-              <User className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
+              <User className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
               <input
                 type="text"
                 required
                 value={partyAName}
                 onChange={(e) => setPartyAName(e.target.value)}
                 placeholder="e.g. Rohan Oberoi"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
               />
             </div>
           </div>
@@ -298,14 +296,14 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
               Client Mobile Number *
             </label>
             <div className="relative">
-              <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
+              <Phone className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
               <input
                 type="text"
                 required
                 value={partyAMobile}
                 onChange={(e) => setPartyAMobile(e.target.value)}
                 placeholder="e.g. +91 98112 34567"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500 font-mono"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500 font-mono"
               />
             </div>
           </div>
@@ -316,14 +314,14 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
               Client Email Address *
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3" />
+              <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-3.5" />
               <input
                 type="email"
                 required
                 value={partyAEmail}
                 onChange={(e) => setPartyAEmail(e.target.value)}
                 placeholder="e.g. rohan.oberoi@domain.com"
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl min-h-[44px] pl-9 pr-3 py-2.5 text-xs text-white focus:outline-none focus:border-red-500"
               />
             </div>
           </div>
@@ -336,20 +334,20 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
             </span>
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-3">
+          {/* Action Buttons with 44px+ touch targets */}
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5">
             {onClose && (
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-zinc-800"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-zinc-800 transition-colors"
               >
                 Cancel
               </button>
             )}
             <button
               type="submit"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-xl shadow-red-950 active:scale-95 transition-all"
+              className="min-h-[48px] w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-xl shadow-red-950 active:scale-95 transition-all"
             >
               <Send className="w-4 h-4" />
               <span>Generate Signing Link (Inactive)</span>
@@ -392,7 +390,7 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               onClick={handleCopyLink}
-              className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg transition-all"
+              className="flex items-center justify-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold min-h-[44px] px-4 py-2.5 rounded-xl shadow-lg transition-all active:scale-95"
             >
               {copiedLink ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
               <span>{copiedLink ? 'Link Copied!' : 'Copy Signing Link'}</span>
@@ -424,7 +422,7 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
                   }
                 }}
                 disabled={emailSending}
-                className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-zinc-700 transition-colors"
+                className="flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-700 transition-colors active:scale-95"
               >
                 <Mail className="w-3.5 h-3.5 text-red-400" />
                 <span>{emailSending ? 'Sending...' : 'Email to Client'}</span>
@@ -437,7 +435,7 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
               )}&body=${encodeURIComponent(
                 `Dear ${createdAgreement.partyAName},\n\nPlease click the following link to review and sign your Red Flag Homes agreement:\n${window.location.origin}${createdAgreement.publicSignUrl}\n\nCorporate Office: Guru Marg, Paschim Vihar, New Delhi\nRegards,\nRed Flag Homes`
               )}`}
-              className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold px-3 py-2.5 rounded-xl border border-zinc-800 transition-colors"
+              className="flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-semibold min-h-[44px] px-3.5 py-2.5 rounded-xl border border-zinc-800 transition-colors active:scale-95"
             >
               <span>Mail Client App</span>
             </a>
@@ -446,7 +444,7 @@ export const AgreementGenerator: React.FC<AgreementGeneratorProps> = ({
               href={createdAgreement.publicSignUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-zinc-700 transition-colors"
+              className="flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold min-h-[44px] px-4 py-2.5 rounded-xl border border-zinc-700 transition-colors active:scale-95"
             >
               <span>Open Sign Portal</span>
               <ExternalLink className="w-3.5 h-3.5" />

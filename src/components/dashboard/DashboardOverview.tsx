@@ -1,18 +1,9 @@
 import React from 'react';
 import {
-  Users,
   UserPlus,
   Clock,
-  Briefcase,
-  Send,
   FileCheck,
-  Trophy,
-  XCircle,
-  IndianRupee,
-  TrendingUp,
   ArrowUpRight,
-  ArrowRight,
-  ShieldAlert,
   Sparkles,
 } from 'lucide-react';
 import { Lead, AgreementData, StaffUser, SystemNotification } from '../../types/crm';
@@ -74,37 +65,38 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
       {/* Top Banner / Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 shadow-xl relative overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-zinc-900 via-zinc-900 to-zinc-950 border border-zinc-800 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/10 blur-[100px] pointer-events-none rounded-full" />
 
         <div className="space-y-1 relative z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-red-500 tracking-wider uppercase bg-red-950/80 px-2.5 py-0.5 rounded-full border border-red-800/50">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] sm:text-xs font-bold text-red-500 tracking-wider uppercase bg-red-950/80 px-2.5 py-0.5 rounded-full border border-red-800/50">
               Red Flag Homes Executive
             </span>
             <span className="text-xs text-zinc-400">· Live Deals Desk</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+          <h1 className="text-lg sm:text-2xl font-extrabold text-white tracking-tight">
             Sales Closing & Agreement Command Center
           </h1>
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl">
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-2xl leading-relaxed">
             Track properties, issue Listing & Property Management MOUs with 83/17 split, and capture digital signatures in real time.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 relative z-10">
+        {/* Action buttons with min-h-[44px] for phone screen touch responsiveness */}
+        <div className="flex flex-col xs:flex-row items-stretch sm:items-center gap-2.5 relative z-10 w-full md:w-auto">
           <button
             onClick={onOpenNewLead}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-red-950/50 active:scale-95"
+            className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs min-h-[44px] px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-red-950/50 active:scale-95 w-full xs:w-auto"
           >
             <UserPlus className="w-4 h-4" />
             <span>Add New Lead</span>
           </button>
           <button
             onClick={onOpenNewAgreement}
-            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-semibold text-xs px-4 py-2.5 rounded-xl transition-all active:scale-95"
+            className="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-100 font-bold text-xs min-h-[44px] px-4 py-2.5 rounded-xl transition-all active:scale-95 w-full xs:w-auto"
           >
             <Sparkles className="w-4 h-4 text-red-400" />
             <span>Generate MOU</span>
@@ -113,28 +105,28 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4">
         {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
             <div
               key={idx}
-              className={`p-5 rounded-2xl border ${kpi.bg} backdrop-blur-sm transition-all hover:scale-[1.01] cursor-pointer flex items-center justify-between shadow-xl`}
+              className={`p-4 sm:p-5 min-h-[80px] rounded-2xl border ${kpi.bg} backdrop-blur-sm transition-all hover:scale-[1.01] cursor-pointer flex items-center justify-between shadow-xl active:scale-98`}
               onClick={() => onNavigateToTab('agreements')}
             >
               <div className="space-y-1">
-                <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider block">
+                <span className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider block">
                   {kpi.title}
                 </span>
-                <div className="text-2xl font-black text-white font-mono tabular-nums tracking-tight">
+                <div className="text-xl sm:text-2xl font-black text-white font-mono tabular-nums tracking-tight">
                   {kpi.value}
                 </div>
-                <div className="text-xs font-medium text-zinc-300">
+                <div className="text-[11px] sm:text-xs font-medium text-zinc-300">
                   {kpi.subtext}
                 </div>
               </div>
-              <div className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 shrink-0">
-                <Icon className={`w-7 h-7 ${kpi.color}`} />
+              <div className="p-3 sm:p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 shrink-0">
+                <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${kpi.color}`} />
               </div>
             </div>
           );
@@ -142,12 +134,12 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
       </div>
 
       {/* Main Signed vs Not Signed Dual Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
         {/* Panel 1: Executed & Signed Agreements */}
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-xl bg-emerald-950 text-emerald-400 border border-emerald-800/60 flex items-center justify-center font-bold text-sm shrink-0">
                 ✓
               </div>
               <div>
@@ -156,7 +148,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </div>
             </div>
 
-            <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-800/50">
+            <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-800/50 shrink-0">
               {signedAgreements.length} Signed
             </span>
           </div>
@@ -172,14 +164,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   key={agr.id}
                   className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800/80 flex items-center justify-between gap-3 hover:border-emerald-800/50 transition-colors"
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xs font-extrabold text-red-400">{agr.id}</span>
                       <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/40">
                         Executed
                       </span>
                     </div>
-                    <div className="font-bold text-xs text-white mt-1">{agr.partyAName}</div>
+                    <div className="font-bold text-xs text-white mt-1 truncate">{agr.partyAName}</div>
                     <div className="text-[11px] text-zinc-400 truncate max-w-xs">{agr.propertyAddress}</div>
                   </div>
 
@@ -196,10 +188,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
 
         {/* Panel 2: Not Signed / Pending Agreements */}
-        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div className="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-950 text-amber-400 border border-amber-800/60 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-xl bg-amber-950 text-amber-400 border border-amber-800/60 flex items-center justify-center font-bold text-sm shrink-0">
                 !
               </div>
               <div>
@@ -208,7 +200,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
               </div>
             </div>
 
-            <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950 px-2.5 py-1 rounded-full border border-amber-800/50">
+            <span className="text-xs font-mono font-bold text-amber-400 bg-amber-950 px-2.5 py-1 rounded-full border border-amber-800/50 shrink-0">
               {notSignedAgreements.length} Not Signed
             </span>
           </div>
@@ -224,14 +216,14 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                   key={agr.id}
                   className="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800/80 flex items-center justify-between gap-3 hover:border-amber-800/50 transition-colors"
                 >
-                  <div>
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xs font-extrabold text-red-400">{agr.id}</span>
                       <span className="text-[10px] text-amber-400 font-bold bg-amber-950 px-2 py-0.5 rounded border border-amber-800/40">
                         {agr.status}
                       </span>
                     </div>
-                    <div className="font-bold text-xs text-white mt-1">{agr.partyAName}</div>
+                    <div className="font-bold text-xs text-white mt-1 truncate">{agr.partyAName}</div>
                     <div className="text-[11px] text-zinc-400 truncate max-w-xs">{agr.propertyAddress}</div>
                   </div>
 
@@ -239,10 +231,10 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
                     href={agr.publicSignUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow shrink-0"
+                    className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs min-h-[44px] px-3.5 py-2.5 rounded-xl shadow shrink-0 active:scale-95"
                   >
                     <span>Sign Link</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <ArrowUpRight className="w-4 h-4" />
                   </a>
                 </div>
               ))
