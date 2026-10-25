@@ -25,6 +25,7 @@ import {
   Copy,
   Check,
   QrCode,
+  X,
 } from 'lucide-react';
 
 export const OFFICIAL_PAYMENT_QR_URL =
@@ -118,6 +119,20 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
   const [completionEmailStatus, setCompletionEmailStatus] = useState<string>('Delivering confirmation email...');
   const [isResendingEmail, setIsResendingEmail] = useState<boolean>(false);
   const [copiedEmailText, setCopiedEmailText] = useState<boolean>(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState<boolean>(false);
+
+  const displayAudit: AuditTrail =
+    finalAuditTrail ||
+    agreement.auditTrail ||
+    createAuditCertificate(
+      agreement,
+      'draw',
+      agreement.partyAName || 'Client',
+      clientIp,
+      undefined,
+      agreement.paymentTransactionId,
+      agreement.paymentScreenshotUrl
+    );
 
   const handleCopyUpi = () => {
     navigator.clipboard.writeText('red.media@superyes');
@@ -384,6 +399,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
     setFinalAuditTrail(audit);
     setAgreement(updatedAgreement);
     setStep('completed');
+    setIsSuccessModalOpen(true);
 
     try {
       confetti({
@@ -435,7 +451,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
           {onBackToCRM && (
             <button
               onClick={onBackToCRM}
-              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors"
+              className="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors min-h-[44px]"
             >
               Back to CRM Desk
             </button>
@@ -563,7 +579,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   <button
                     type="button"
                     onClick={handleAddAsset}
-                    className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-1.5 rounded-xl transition-all shadow"
+                    className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3 py-2 rounded-xl transition-all shadow min-h-[44px]"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Another Property</span>
@@ -585,7 +601,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                           <button
                             type="button"
                             onClick={() => handleRemoveAsset(asset.id)}
-                            className="text-zinc-500 hover:text-red-400 p-1"
+                            className="text-zinc-500 hover:text-red-400 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -605,7 +621,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                               handleAssetChange(asset.id, 'propertyAddress', e.target.value)
                             }
                             placeholder="Penthouse 4B, Golf Course Road, Gurugram"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-red-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-red-500"
                           />
                         </div>
 
@@ -621,7 +637,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                               handleAssetChange(asset.id, 'bhkCount', e.target.value)
                             }
                             placeholder="e.g. 3 BHK, 4 BHK Villa, Studio"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-red-500"
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-red-500"
                           />
                         </div>
                       </div>
@@ -644,7 +660,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     <select
                       value={govtIdType}
                       onChange={(e) => setGovtIdType(e.target.value as any)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-white"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white"
                     >
                       <option value="Aadhaar">Aadhaar Card</option>
                       <option value="PAN">PAN Card</option>
@@ -662,11 +678,11 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                       value={govtIdNumber}
                       onChange={(e) => setGovtIdNumber(e.target.value)}
                       placeholder="4589-1234-9012"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-white font-mono"
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white font-mono"
                     />
                   </div>
                   <div>
-                    <label className="flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl p-2 text-xs text-zinc-300 cursor-pointer transition-colors">
+                    <label className="flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-300 cursor-pointer transition-colors min-h-[44px]">
                       <Upload className="w-3.5 h-3.5 text-red-400" />
                       <span className="truncate max-w-[140px]">
                         {uploadedGovtIdName || 'Upload Govt ID Photo'}
@@ -737,7 +753,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-xs shadow-xl shadow-red-950 flex items-center justify-center gap-2 transition-all active:scale-95"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-red-700 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-xs shadow-xl shadow-red-950 flex items-center justify-center gap-2 transition-all active:scale-95 min-h-[48px]"
               >
                 <span>Proceed to Live Selfie Identity Verification</span>
                 <ChevronRight className="w-4 h-4" />
@@ -778,7 +794,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow"
+                  className="bg-red-600 hover:bg-red-500 text-white text-xs font-bold px-4 py-3 rounded-xl shadow min-h-[44px]"
                 >
                   Start Webcam
                 </button>
@@ -788,13 +804,13 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 <button
                   type="button"
                   onClick={capturePhoto}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-4 py-3 rounded-xl shadow min-h-[44px]"
                 >
                   Capture Photo
                 </button>
               )}
 
-              <label className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-4 py-2.5 rounded-xl border border-zinc-700 cursor-pointer">
+              <label className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold px-4 py-3 rounded-xl border border-zinc-700 cursor-pointer min-h-[44px] flex items-center justify-center">
                 <span>Upload Photo</span>
                 <input
                   type="file"
@@ -808,7 +824,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
             <button
               onClick={() => setStep('payment')}
               disabled={!selfieUrl}
-              className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+              className={`w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-[48px] ${
                 selfieUrl
                   ? 'bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-950'
                   : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
@@ -876,7 +892,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     <button
                       type="button"
                       onClick={handleCopyUpi}
-                      className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-semibold border border-zinc-700 flex items-center gap-1 transition-all shrink-0 active:scale-95"
+                      className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[11px] font-semibold border border-zinc-700 flex items-center gap-1 transition-all shrink-0 active:scale-95 min-h-[44px]"
                     >
                       {copiedUpi ? (
                         <>
@@ -944,7 +960,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 <label className="block text-xs font-bold text-zinc-200 mb-1">
                   Upload Payment Confirmation Screenshot
                 </label>
-                <label className="flex items-center justify-between bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 cursor-pointer transition-colors">
+                <label className="flex items-center justify-between bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 cursor-pointer transition-colors min-h-[44px]">
                   <div className="flex items-center gap-2">
                     <Upload className="w-4 h-4 text-red-500 shrink-0" />
                     <span className="truncate max-w-[200px]">
@@ -984,7 +1000,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
 
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-xs shadow-xl shadow-red-950 flex items-center justify-center gap-2 transition-all active:scale-95"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-red-700 via-red-600 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-xs shadow-xl shadow-red-950 flex items-center justify-center gap-2 transition-all active:scale-95 min-h-[48px]"
               >
                 <span>Submit Payment Details & Review Agreement</span>
                 <ChevronRight className="w-4 h-4" />
@@ -1011,7 +1027,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
 
               <button
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-2 rounded-xl border border-zinc-700 transition-colors shrink-0"
+                className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-2 rounded-xl border border-zinc-700 transition-colors shrink-0 min-h-[44px]"
               >
                 <Printer className="w-3.5 h-3.5" />
                 <span>Print PDF</span>
@@ -1049,7 +1065,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
               <button
                 disabled={!acceptedTerms}
                 onClick={() => setStep('sign')}
-                className={`w-full py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
+                className={`w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-[48px] ${
                   acceptedTerms
                     ? 'bg-red-600 hover:bg-red-500 text-white shadow-xl shadow-red-950'
                     : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
@@ -1089,7 +1105,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   setSignatureType('draw');
                   setSignError('');
                 }}
-                className={`py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                className={`py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all min-h-[44px] ${
                   signatureType === 'draw' ? 'bg-red-600 text-white shadow' : 'text-zinc-400'
                 }`}
               >
@@ -1101,7 +1117,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   setSignatureType('upload');
                   setSignError('');
                 }}
-                className={`py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all ${
+                className={`py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all min-h-[44px] ${
                   signatureType === 'upload' ? 'bg-red-600 text-white shadow' : 'text-zinc-400'
                 }`}
               >
@@ -1126,7 +1142,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                           key={c.color}
                           type="button"
                           onClick={() => setPenColor(c.color)}
-                          className={`w-5 h-5 rounded-full border border-zinc-600 transition-transform ${
+                          className={`w-6 h-6 rounded-full border border-zinc-600 transition-transform ${
                             penColor === c.color ? 'scale-125 ring-2 ring-red-500' : 'hover:scale-110'
                           }`}
                           style={{ backgroundColor: c.color }}
@@ -1139,7 +1155,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   <button
                     type="button"
                     onClick={clearCanvas}
-                    className="text-red-400 hover:text-red-300 font-semibold underline text-xs flex items-center gap-1"
+                    className="text-red-400 hover:text-red-300 font-semibold underline text-xs flex items-center gap-1 min-h-[44px]"
                   >
                     <Eraser className="w-3.5 h-3.5" />
                     <span>Clear Canvas</span>
@@ -1173,7 +1189,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
             {/* UPLOAD SIGNATURE */}
             {signatureType === 'upload' && (
               <div className="space-y-3">
-                <label className="block border-2 border-dashed border-zinc-700 hover:border-red-500 rounded-2xl p-8 text-center cursor-pointer bg-zinc-950 transition-colors">
+                <label className="block border-2 border-dashed border-zinc-700 hover:border-red-500 rounded-2xl p-8 text-center cursor-pointer bg-zinc-950 transition-colors min-h-[120px]">
                   <Upload className="w-8 h-8 text-red-500 mx-auto mb-2" />
                   <span className="text-xs font-bold text-white block">Upload Signature Image</span>
                   <span className="text-[10px] text-zinc-400">PNG or JPG file with transparent/white background</span>
@@ -1207,7 +1223,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
             {/* Confirm & Execute Button */}
             <button
               onClick={handleConfirmSignature}
-              className="w-full bg-gradient-to-r from-red-700 via-red-600 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-sm py-4 rounded-xl shadow-2xl shadow-red-950 flex items-center justify-center gap-2 transition-all active:scale-95"
+              className="w-full bg-gradient-to-r from-red-700 via-red-600 to-red-500 hover:from-red-600 hover:to-red-400 text-white font-extrabold text-sm py-4 rounded-xl shadow-2xl shadow-red-950 flex items-center justify-center gap-2 transition-all active:scale-95 min-h-[50px]"
             >
               <Award className="w-5 h-5" />
               <span>Confirm & Execute MOU Signature</span>
@@ -1216,10 +1232,10 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
         )}
 
         {/* COMPLETED - WELCOME HERO BANNER & DOWNLOAD SIGNED PDF */}
-        {step === 'completed' && finalAuditTrail && (
+        {step === 'completed' && (
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8 animate-in zoom-in-95 duration-200">
             {/* Welcome to Red Flag Homes Hero Header */}
-            <div className="text-center space-y-4 bg-gradient-to-b from-red-950/80 via-zinc-950 to-zinc-900 p-8 rounded-2xl border border-red-800/40 relative overflow-hidden">
+            <div className="text-center space-y-4 bg-gradient-to-b from-red-950/80 via-zinc-950 to-zinc-900 p-6 sm:p-8 rounded-2xl border border-red-800/40 relative overflow-hidden">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-32 bg-red-600/10 blur-3xl pointer-events-none rounded-full" />
               <div className="w-20 h-20 bg-emerald-950 text-emerald-400 border-2 border-emerald-500/60 rounded-full flex items-center justify-center mx-auto shadow-2xl relative z-10">
                 <CheckCircle2 className="w-12 h-12" />
@@ -1229,27 +1245,27 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 <span className="text-xs font-mono font-bold text-red-400 uppercase tracking-widest block">
                   Official Onboarding Complete
                 </span>
-                <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
                   WELCOME TO RED FLAG HOMES!
                 </h1>
-                <p className="text-sm text-zinc-300 font-medium max-w-lg mx-auto pt-1">
+                <p className="text-xs sm:text-sm text-zinc-300 font-medium max-w-lg mx-auto pt-1">
                   Congratulations <strong>{agreement.partyAName}</strong>! Your Listing & Property Management MOU has been digitally executed and officially sealed.
                 </p>
               </div>
 
               {/* PDF Download Direct Actions Bar */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-3 relative z-10">
+              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 pt-3 relative z-10">
                 <button
-                  onClick={() => downloadMouPdf(agreement, finalAuditTrail)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-2xl shadow-red-950 transition-all active:scale-95"
+                  onClick={() => downloadMouPdf(agreement, displayAudit)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-extrabold text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-2xl shadow-red-950 transition-all active:scale-95 min-h-[48px]"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download Signed MOU PDF</span>
                 </button>
 
                 <button
-                  onClick={() => finalAuditTrail && downloadAuditCertificatePdf(finalAuditTrail, agreement)}
-                  className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl border border-zinc-700 transition-colors"
+                  onClick={() => downloadAuditCertificatePdf(displayAudit, agreement)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl border border-zinc-700 transition-colors min-h-[48px]"
                 >
                   <Printer className="w-4 h-4 text-emerald-400" />
                   <span>Download Audit Certificate PDF</span>
@@ -1258,7 +1274,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 {onBackToCRM && (
                   <button
                     onClick={onBackToCRM}
-                    className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-3.5 rounded-xl border border-zinc-800"
+                    className="w-full sm:w-auto bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs px-4 py-3.5 rounded-xl border border-zinc-800 min-h-[48px]"
                   >
                     Return to Sales Desk
                   </button>
@@ -1297,7 +1313,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   )}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow"
+                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow min-h-[44px]"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>Open in Gmail</span>
@@ -1308,7 +1324,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   href={`mailto:${encodeURIComponent(clientEmail || agreement.partyAEmail || '')}?subject=${encodeURIComponent(`Welcome to Red Flag Homes! Executed MOU - ${agreement.id}`)}&body=${encodeURIComponent(
                     `Welcome to Red Flag Homes!\n\nAgreement ID: ${agreement.id}\nOwner: ${clientName || agreement.partyAName}\nCorporate Office: Guru Marg, Paschim Vihar, New Delhi\nOfficial Sender: agreements@redflaghomes.in\n\nExecuted MOU and audit certificate recorded.`
                   )}`}
-                  className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold text-xs px-3.5 py-2 rounded-xl border border-zinc-800 transition-colors"
+                  className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-zinc-800 transition-colors min-h-[44px]"
                 >
                   <span>Open in Mail App</span>
                 </a>
@@ -1339,7 +1355,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     }
                   }}
                   disabled={isResendingEmail}
-                  className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs px-3.5 py-2 rounded-xl border border-zinc-800 transition-colors"
+                  className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl border border-zinc-800 transition-colors min-h-[44px]"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isResendingEmail ? 'animate-spin text-red-400' : 'text-zinc-400'}`} />
                   <span>{isResendingEmail ? 'Resending...' : 'Resend Email'}</span>
@@ -1354,7 +1370,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     setCopiedEmailText(true);
                     setTimeout(() => setCopiedEmailText(false), 2000);
                   }}
-                  className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs px-3 py-2 rounded-xl border border-zinc-800 transition-colors sm:ml-auto"
+                  className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 text-xs px-3 py-2.5 rounded-xl border border-zinc-800 transition-colors sm:ml-auto min-h-[44px]"
                 >
                   {copiedEmailText ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedEmailText ? 'Copied' : 'Copy Email Text'}</span>
@@ -1365,7 +1381,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
             {/* Official Digital Company Seal Card */}
             <DigitalCompanySeal
               agreementId={agreement.id}
-              timestamp={finalAuditTrail.signedTimestamp}
+              timestamp={displayAudit.signedTimestamp}
               qrCodeUrl={qrCodeUrl}
             />
 
@@ -1375,7 +1391,7 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider font-sans flex items-center gap-2">
                   <Award className="w-4 h-4 text-emerald-400" /> Digital Audit Certificate
                 </span>
-                <span className="text-emerald-400 font-bold text-sm">{finalAuditTrail.certificateId}</span>
+                <span className="text-emerald-400 font-bold text-sm">{displayAudit.certificateId}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-zinc-300">
@@ -1386,22 +1402,22 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
 
                 <div>
                   <span className="text-zinc-500 block text-[10px]">Signed Timestamp:</span>
-                  <span className="text-white">{new Date(finalAuditTrail.signedTimestamp).toLocaleString('en-IN')}</span>
+                  <span className="text-white">{new Date(displayAudit.signedTimestamp).toLocaleString('en-IN')}</span>
                 </div>
 
                 <div>
                   <span className="text-zinc-500 block text-[10px]">Client IP Address:</span>
-                  <span className="text-white">{finalAuditTrail.ipAddress}</span>
+                  <span className="text-white">{displayAudit.ipAddress}</span>
                 </div>
 
                 <div>
                   <span className="text-zinc-500 block text-[10px]">Browser & Verification:</span>
-                  <span className="text-white">{finalAuditTrail.browser}</span>
+                  <span className="text-white">{displayAudit.browser}</span>
                 </div>
 
                 <div className="sm:col-span-2">
                   <span className="text-zinc-500 block text-[10px]">Document Cryptographic Hash (SHA-256):</span>
-                  <span className="text-red-400 truncate block text-[10px] bg-zinc-900 p-2 rounded border border-zinc-800">{finalAuditTrail.documentHash}</span>
+                  <span className="text-red-400 truncate block text-[10px] bg-zinc-900 p-2 rounded border border-zinc-800">{displayAudit.documentHash}</span>
                 </div>
               </div>
             </div>
@@ -1413,8 +1429,8 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   Executed Signed Document Paper Preview
                 </span>
                 <button
-                  onClick={() => downloadMouPdf(agreement, finalAuditTrail)}
-                  className="text-red-400 hover:text-red-300 font-bold underline flex items-center gap-1"
+                  onClick={() => downloadMouPdf(agreement, displayAudit)}
+                  className="text-red-400 hover:text-red-300 font-bold underline flex items-center gap-1 min-h-[44px]"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download / Print PDF</span>
@@ -1427,12 +1443,12 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 <div className="mt-8 pt-6 border-t-2 border-zinc-200 grid grid-cols-1 sm:grid-cols-2 gap-6 font-sans">
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
                     <span className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Party A Signature</span>
-                    {finalAuditTrail.signatureData.startsWith('data:image') ? (
-                      <img src={finalAuditTrail.signatureData} alt="Client Signature" className="h-12 object-contain" />
+                    {displayAudit.signatureData && displayAudit.signatureData.startsWith('data:image') ? (
+                      <img src={displayAudit.signatureData} alt="Client Signature" className="h-12 object-contain" />
                     ) : (
-                      <div className="font-serif italic text-lg text-zinc-900">{finalAuditTrail.signatureData}</div>
+                      <div className="font-serif italic text-lg text-zinc-900">{displayAudit.signatureData || agreement.partyAName}</div>
                     )}
-                    <span className="text-[10px] text-zinc-400 font-mono block pt-1">Timestamp: {new Date(finalAuditTrail.signedTimestamp).toLocaleString('en-IN')}</span>
+                    <span className="text-[10px] text-zinc-400 font-mono block pt-1">Timestamp: {new Date(displayAudit.signedTimestamp).toLocaleString('en-IN')}</span>
                   </div>
 
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
@@ -1446,6 +1462,91 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
           </div>
         )}
       </main>
+
+      {/* Persistent Success Modal upon MOU Signing Completion */}
+      {isSuccessModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center space-y-6 shadow-2xl relative overflow-hidden border-red-500/40">
+            {/* Top Red Glow Effect */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-80 h-28 bg-red-600/20 blur-3xl pointer-events-none rounded-full" />
+
+            {/* Close / Dismiss button */}
+            <button
+              onClick={() => setIsSuccessModalOpen(false)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 transition-colors"
+              title="Close Modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Success Icon */}
+            <div className="w-20 h-20 bg-emerald-950 text-emerald-400 border-2 border-emerald-500/80 rounded-full flex items-center justify-center mx-auto shadow-2xl relative z-10 animate-pulse">
+              <CheckCircle2 className="w-12 h-12" />
+            </div>
+
+            <div className="space-y-2 relative z-10">
+              <span className="text-xs font-mono font-bold text-red-400 uppercase tracking-widest block">
+                Official Onboarding Complete
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                WELCOME TO RED FLAG HOMES!
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-300 font-medium leading-relaxed">
+                Your Listing & Property Management MOU (<strong className="text-red-400 font-mono">{agreement.id}</strong>) for <strong>{agreement.partyAName}</strong> has been successfully executed, digitally sealed, and archived.
+              </p>
+            </div>
+
+            {/* Key Audit Details Badge */}
+            <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 text-left text-xs font-mono space-y-1.5 text-zinc-400">
+              <div className="flex justify-between items-center border-b border-zinc-800/80 pb-1">
+                <span>Audit Certificate ID:</span>
+                <strong className="text-emerald-400 font-bold">{displayAudit.certificateId}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Signed Timestamp:</span>
+                <strong className="text-zinc-200">{new Date(displayAudit.signedTimestamp).toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>Client IP Address:</span>
+                <strong className="text-zinc-200">{displayAudit.ipAddress}</strong>
+              </div>
+            </div>
+
+            {/* Direct Action Buttons as requested */}
+            <div className="space-y-3 pt-2">
+              <button
+                onClick={() => downloadMouPdf(agreement, displayAudit)}
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 via-red-500 to-red-400 hover:from-red-500 hover:to-red-300 text-white font-extrabold text-sm py-3.5 rounded-xl shadow-xl shadow-red-950 transition-all active:scale-95 min-h-[48px]"
+              >
+                <Download className="w-4 h-4" />
+                <span>Download Signed PDF</span>
+              </button>
+
+              <button
+                onClick={() => downloadAuditCertificatePdf(displayAudit, agreement)}
+                className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs py-3 rounded-xl border border-zinc-700 transition-colors min-h-[44px]"
+              >
+                <Printer className="w-4 h-4 text-emerald-400" />
+                <span>Download Audit Certificate PDF</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (onBackToCRM) {
+                    onBackToCRM();
+                  } else {
+                    window.location.href = '/';
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-zinc-950 hover:bg-zinc-800 text-zinc-300 hover:text-white font-extrabold text-xs py-3.5 rounded-xl border border-zinc-800 transition-colors min-h-[48px]"
+              >
+                <ChevronRight className="w-4 h-4 text-red-500" />
+                <span>Back to Dashboard</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

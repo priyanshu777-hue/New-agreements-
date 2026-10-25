@@ -26,15 +26,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         onLoginSuccess(email.trim());
       } else {
         setIsLoading(false);
-        setError('Invalid email or password. Use agreements@redflaghomes.in / #Redflag@123');
+        setError('Invalid email or password. Please verify your internal executive credentials.');
       }
     }, 400);
-  };
-
-  const handleDemoFill = () => {
-    setEmail('agreements@redflaghomes.in');
-    setPassword('#Redflag@123');
-    setError('');
   };
 
   return (
@@ -53,27 +47,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <p className="text-xs text-zinc-400">
               Authorized Red Flag Homes Executive Portal
             </p>
-          </div>
-        </div>
-
-        {/* Demo Credentials Quick Fill Badge */}
-        <div
-          onClick={handleDemoFill}
-          className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 hover:border-red-500/50 transition-colors cursor-pointer text-left text-xs space-y-1 group"
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-red-400 flex items-center gap-1.5">
-              <Shield className="w-3 h-3 text-red-500" /> Authorized Sign-In
-            </span>
-            <span className="text-[10px] text-zinc-500 group-hover:text-red-300 font-mono">
-              Click to Auto-fill
-            </span>
-          </div>
-          <div className="font-mono text-zinc-300">
-            Email: <strong className="text-white">agreements@redflaghomes.in</strong>
-          </div>
-          <div className="font-mono text-zinc-300">
-            Password: <strong className="text-red-400">#Redflag@123</strong>
           </div>
         </div>
 

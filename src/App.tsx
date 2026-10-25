@@ -165,6 +165,7 @@ export default function App() {
   const handleCompleteSigning = (signedAgr: AgreementData, auditTrail: AuditTrail) => {
     const updatedAgreements = agreements.map((a) => (a.id === signedAgr.id ? signedAgr : a));
     setAgreements(updatedAgreements);
+    setSigningAgreement(signedAgr);
 
     // Also update associated lead stage to "Signed" or "Onboarded"
     if (signedAgr.leadId) {
