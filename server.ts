@@ -1,9 +1,13 @@
 import express from 'express';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import { GoogleGenAI } from '@google/genai';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -354,25 +358,46 @@ You can review the generated template card above and click **"✨ Add Template t
 
 
 async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
-    const { createServer } = await import('vite');
-    const vite = await createServer({
-      server: {
-        middlewareMode: true,
-        hmr: process.env.DISABLE_HMR === 'true' ? false : { server },
-      },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+  const isProduction = process.env.NODE_ENV === 'production' || !__filename.endsWith('.ts');
+
+  if (!isProduction) {
+    try {
+      const { createServer } = await import('vite');
+      const vite = await createServer({
+        server: {
+          middlewareMode: true,
+          hmr: process.env.DISABLE_HMR === 'true' ? false : { server },
+        },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (err) {
+      console.warn('Vite dev server failed to start, falling back to static files:', err);
+      serveStatic();
+    }
   } else {
-    app.use(express.static(path.join(__dirname, 'dist')));
+    serveStatic();
+  }
+
+  function serveStatic() {
+    // When server.ts is compiled into dist/server.js, __dirname is already the 'dist' directory.
+    // If executed from project root, fallback to path.join(__dirname, 'dist').
+    const distPath = fs.existsSync(path.join(__dirname, 'index.html'))
+      ? __dirname
+      : path.join(__dirname, 'dist');
+
+    app.use(express.static(distPath));
+
     app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+      if (req.path.startsWith('/api')) {
+        return res.status(404).json({ error: 'API route not found' });
+      }
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
   server.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Red Flag Homes Portal running on port ${PORT}`);
+    console.log(`🚀 Red Flag Homes Portal running on port ${PORT} [Mode: ${isProduction ? 'Production' : 'Development'}]`);
   });
 }
 
