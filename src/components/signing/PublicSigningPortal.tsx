@@ -26,6 +26,7 @@ import {
   Check,
   QrCode,
   X,
+  AlertCircle,
 } from 'lucide-react';
 
 export const OFFICIAL_PAYMENT_QR_URL =
@@ -181,9 +182,146 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
     setAssets(assets.map((a) => (a.id === id ? { ...a, [field]: val } : a)));
   };
 
+  // Validation States & Input Formatting Helpers
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [formTouched, setFormTouched] = useState<Record<string, boolean>>({});
+
+  const clearFieldError = (fieldKey: string) => {
+    if (formErrors[fieldKey]) {
+      setFormErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldKey];
+        return next;
+      });
+    }
+  };
+
+  const markFieldTouched = (fieldKey: string) => {
+    setFormTouched((prev) => ({ ...prev, [fieldKey]: true }));
+  };
+
+  const getInputClass = (fieldKey: string, extraClasses = '') => {
+    const isInvalid = formErrors[fieldKey] && (formTouched[fieldKey] || formErrors[fieldKey]);
+    if (isInvalid) {
+      return `w-full bg-zinc-950 border-2 border-red-500 text-red-100 placeholder-red-400/60 rounded-xl p-2.5 text-xs focus:outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-sm shadow-red-950/80 transition-colors ${extraClasses}`;
+    }
+    return `w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500 transition-colors ${extraClasses}`;
+  };
+
+  const renderFieldError = (fieldKey: string) => {
+    if (!formErrors[fieldKey]) return null;
+    return (
+      <span className="text-[10px] text-red-400 font-semibold mt-1 flex items-center gap-1 animate-in fade-in duration-150">
+        <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
+        <span>{formErrors[fieldKey]}</span>
+      </span>
+    );
+  };
+
+  const validateStep1 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!clientName.trim()) {
+      errors.clientName = 'Full legal name is required';
+    } else if (clientName.trim().length < 2) {
+      errors.clientName = 'Name must be at least 2 characters';
+    }
+
+    const cleanMobile = clientMobile.replace(/[\s-]/g, '').replace(/^(\+91|91)/, '');
+    if (!clientMobile.trim()) {
+      errors.clientMobile = 'Mobile number is required';
+    } else if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+      errors.clientMobile = 'Invalid 10-digit mobile number (e.g. 9811234567)';
+    }
+
+    if (!clientEmail.trim()) {
+      errors.clientEmail = 'Email address is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientEmail.trim())) {
+      errors.clientEmail = 'Invalid email format (e.g. name@domain.com)';
+    }
+
+    if (!govtIdNumber.trim()) {
+      errors.govtIdNumber = `${govtIdType} number is required`;
+    } else if (govtIdType === 'Aadhaar') {
+      const cleanAadhaar = govtIdNumber.replace(/[\s-]/g, '');
+      if (!/^\d{12}$/.test(cleanAadhaar)) {
+        errors.govtIdNumber = 'Aadhaar must be 12 digits (e.g. 4589 1234 9012)';
+      }
+    } else if (govtIdType === 'PAN') {
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/i.test(govtIdNumber.trim())) {
+        errors.govtIdNumber = 'Invalid PAN format (e.g. ABCDE1234F)';
+      }
+    } else if (govtIdNumber.trim().length < 6) {
+      errors.govtIdNumber = `${govtIdType} number must be at least 6 characters`;
+    }
+
+    if (!bankHolderName.trim()) {
+      errors.bankHolderName = 'Account holder name is required';
+    }
+
+    if (!bankName.trim()) {
+      errors.bankName = 'Bank name is required';
+    }
+
+    const cleanAccNo = accountNumber.replace(/[\s-]/g, '');
+    if (!accountNumber.trim()) {
+      errors.accountNumber = 'Account number is required';
+    } else if (!/^\d{8,18}$/.test(cleanAccNo)) {
+      errors.accountNumber = 'Account number must be 8–18 digits';
+    }
+
+    if (!ifscCode.trim()) {
+      errors.ifscCode = 'IFSC code is required';
+    } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/i.test(ifscCode.trim())) {
+      errors.ifscCode = 'Invalid 11-char IFSC code (e.g. HDFC0000021)';
+    }
+
+    assets.forEach((ast, idx) => {
+      if (!ast.propertyAddress.trim()) {
+        errors[`asset_address_${ast.id}`] = `Property Asset #${idx + 1} address is required`;
+      }
+    });
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep3 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!paymentTxId.trim()) {
+      errors.paymentTxId = 'Payment Transaction ID / UTR number is required';
+    } else if (paymentTxId.trim().length < 6) {
+      errors.paymentTxId = 'Transaction ID / UTR must be at least 6 characters';
+    }
+
+    if (!paymentScreenshotUrl) {
+      errors.paymentScreenshotUrl = 'Please upload a payment confirmation screenshot';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // Step 1 Submit -> Proceed to Selfie Step
   const handleSaveClientDetails = (e: React.FormEvent) => {
     e.preventDefault();
+
+    setFormTouched({
+      clientName: true,
+      clientMobile: true,
+      clientEmail: true,
+      govtIdNumber: true,
+      bankHolderName: true,
+      bankName: true,
+      accountNumber: true,
+      ifscCode: true,
+    });
+
+    if (!validateStep1()) {
+      return;
+    }
+
     const primaryAddress = assets[0]?.propertyAddress || agreement.propertyAddress;
 
     const updatedAgr: AgreementData = {
@@ -530,12 +668,16 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     </label>
                     <input
                       type="text"
-                      required
                       value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
+                      onChange={(e) => {
+                        setClientName(e.target.value);
+                        clearFieldError('clientName');
+                      }}
+                      onBlur={() => markFieldTouched('clientName')}
                       placeholder="e.g. Rohan Oberoi"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+                      className={getInputClass('clientName')}
                     />
+                    {renderFieldError('clientName')}
                   </div>
 
                   <div>
@@ -544,12 +686,16 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     </label>
                     <input
                       type="text"
-                      required
                       value={clientMobile}
-                      onChange={(e) => setClientMobile(e.target.value)}
+                      onChange={(e) => {
+                        setClientMobile(e.target.value);
+                        clearFieldError('clientMobile');
+                      }}
+                      onBlur={() => markFieldTouched('clientMobile')}
                       placeholder="+91 98112 34567"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white font-mono focus:outline-none focus:border-red-500"
+                      className={getInputClass('clientMobile', 'font-mono')}
                     />
+                    {renderFieldError('clientMobile')}
                   </div>
 
                   <div>
@@ -558,12 +704,16 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                     </label>
                     <input
                       type="email"
-                      required
                       value={clientEmail}
-                      onChange={(e) => setClientEmail(e.target.value)}
+                      onChange={(e) => {
+                        setClientEmail(e.target.value);
+                        clearFieldError('clientEmail');
+                      }}
+                      onBlur={() => markFieldTouched('clientEmail')}
                       placeholder="rohan.oberoi@domain.com"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+                      className={getInputClass('clientEmail')}
                     />
+                    {renderFieldError('clientEmail')}
                   </div>
                 </div>
               </div>
@@ -615,14 +765,16 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                           </label>
                           <input
                             type="text"
-                            required
                             value={asset.propertyAddress}
-                            onChange={(e) =>
-                              handleAssetChange(asset.id, 'propertyAddress', e.target.value)
-                            }
+                            onChange={(e) => {
+                              handleAssetChange(asset.id, 'propertyAddress', e.target.value);
+                              clearFieldError(`asset_address_${asset.id}`);
+                            }}
+                            onBlur={() => markFieldTouched(`asset_address_${asset.id}`)}
                             placeholder="Penthouse 4B, Golf Course Road, Gurugram"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-xs text-white focus:outline-none focus:border-red-500"
+                            className={getInputClass(`asset_address_${asset.id}`)}
                           />
+                          {renderFieldError(`asset_address_${asset.id}`)}
                         </div>
 
                         <div>
@@ -631,7 +783,6 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                           </label>
                           <input
                             type="text"
-                            required
                             value={asset.bhkCount}
                             onChange={(e) =>
                               handleAssetChange(asset.id, 'bhkCount', e.target.value)
@@ -670,16 +821,20 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   </div>
                   <div>
                     <label className="block text-[10px] font-semibold text-zinc-400 mb-1">
-                      ID Number
+                      ID Number *
                     </label>
                     <input
                       type="text"
-                      required
                       value={govtIdNumber}
-                      onChange={(e) => setGovtIdNumber(e.target.value)}
+                      onChange={(e) => {
+                        setGovtIdNumber(e.target.value);
+                        clearFieldError('govtIdNumber');
+                      }}
+                      onBlur={() => markFieldTouched('govtIdNumber')}
                       placeholder="4589-1234-9012"
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-white font-mono"
+                      className={getInputClass('govtIdNumber', 'font-mono')}
                     />
+                    {renderFieldError('govtIdNumber')}
                   </div>
                   <div>
                     <label className="flex items-center justify-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-300 cursor-pointer transition-colors min-h-[44px]">
@@ -704,48 +859,64 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">Holder Name</label>
+                      <label className="block text-[10px] text-zinc-400 mb-1">Holder Name *</label>
                       <input
                         type="text"
-                        required
                         value={bankHolderName}
-                        onChange={(e) => setBankHolderName(e.target.value)}
+                        onChange={(e) => {
+                          setBankHolderName(e.target.value);
+                          clearFieldError('bankHolderName');
+                        }}
+                        onBlur={() => markFieldTouched('bankHolderName')}
                         placeholder="Rohan Oberoi"
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-white"
+                        className={getInputClass('bankHolderName')}
                       />
+                      {renderFieldError('bankHolderName')}
                     </div>
                     <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">Bank Name</label>
+                      <label className="block text-[10px] text-zinc-400 mb-1">Bank Name *</label>
                       <input
                         type="text"
-                        required
                         value={bankName}
-                        onChange={(e) => setBankName(e.target.value)}
+                        onChange={(e) => {
+                          setBankName(e.target.value);
+                          clearFieldError('bankName');
+                        }}
+                        onBlur={() => markFieldTouched('bankName')}
                         placeholder="HDFC Bank"
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-white"
+                        className={getInputClass('bankName')}
                       />
+                      {renderFieldError('bankName')}
                     </div>
                     <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">Account No.</label>
+                      <label className="block text-[10px] text-zinc-400 mb-1">Account No. *</label>
                       <input
                         type="text"
-                        required
                         value={accountNumber}
-                        onChange={(e) => setAccountNumber(e.target.value)}
+                        onChange={(e) => {
+                          setAccountNumber(e.target.value);
+                          clearFieldError('accountNumber');
+                        }}
+                        onBlur={() => markFieldTouched('accountNumber')}
                         placeholder="002101584930"
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-white font-mono"
+                        className={getInputClass('accountNumber', 'font-mono')}
                       />
+                      {renderFieldError('accountNumber')}
                     </div>
                     <div>
-                      <label className="block text-[10px] text-zinc-400 mb-1">IFSC Code</label>
+                      <label className="block text-[10px] text-zinc-400 mb-1">IFSC Code *</label>
                       <input
                         type="text"
-                        required
                         value={ifscCode}
-                        onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+                        onChange={(e) => {
+                          setIfscCode(e.target.value.toUpperCase());
+                          clearFieldError('ifscCode');
+                        }}
+                        onBlur={() => markFieldTouched('ifscCode')}
                         placeholder="HDFC0000021"
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-white font-mono"
+                        className={getInputClass('ifscCode', 'font-mono')}
                       />
+                      {renderFieldError('ifscCode')}
                     </div>
                   </div>
                 </div>
@@ -933,8 +1104,11 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!paymentTxId.trim()) {
-                  setPaymentError('Please enter your payment Transaction ID / UTR number.');
+                setFormTouched({
+                  paymentTxId: true,
+                  paymentScreenshotUrl: true,
+                });
+                if (!validateStep3()) {
                   return;
                 }
                 setPaymentError('');
@@ -948,19 +1122,29 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                 </label>
                 <input
                   type="text"
-                  required
                   value={paymentTxId}
-                  onChange={(e) => setPaymentTxId(e.target.value)}
+                  onChange={(e) => {
+                    setPaymentTxId(e.target.value);
+                    clearFieldError('paymentTxId');
+                  }}
+                  onBlur={() => markFieldTouched('paymentTxId')}
                   placeholder="e.g. UPI/429104812390 or UTR-982104"
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-xs text-white font-mono placeholder-zinc-500 focus:outline-none focus:border-red-500"
+                  className={getInputClass('paymentTxId', 'font-mono p-3')}
                 />
+                {renderFieldError('paymentTxId')}
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-zinc-200 mb-1">
-                  Upload Payment Confirmation Screenshot
+                  Upload Payment Confirmation Screenshot *
                 </label>
-                <label className="flex items-center justify-between bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-zinc-300 cursor-pointer transition-colors min-h-[44px]">
+                <label
+                  className={`flex items-center justify-between border rounded-xl p-3 text-xs text-zinc-300 cursor-pointer transition-colors min-h-[44px] ${
+                    formErrors.paymentScreenshotUrl && (formTouched.paymentScreenshotUrl || formErrors.paymentScreenshotUrl)
+                      ? 'bg-zinc-950 border-2 border-red-500 shadow-sm shadow-red-950/80'
+                      : 'bg-zinc-950 hover:bg-zinc-900 border-zinc-800'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
                     <Upload className="w-4 h-4 text-red-500 shrink-0" />
                     <span className="truncate max-w-[200px]">
@@ -973,10 +1157,14 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   <input
                     type="file"
                     className="hidden"
-                    onChange={handlePaymentScreenshotUpload}
+                    onChange={(e) => {
+                      handlePaymentScreenshotUpload(e);
+                      clearFieldError('paymentScreenshotUrl');
+                    }}
                     accept="image/*"
                   />
                 </label>
+                {renderFieldError('paymentScreenshotUrl')}
 
                 {paymentScreenshotUrl && (
                   <div className="mt-2 p-2 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center gap-3">
