@@ -91,10 +91,10 @@ function getSmtpTransporter() {
 
 // Email Automation Route: Sends from agreements@redflaghomes.in to client & hello@redflaghomes.in
 app.post('/api/email/send', async (req, res) => {
-  const { recipient, subject, agreementId, bodyText, attachments } = req.body;
+  const { recipient, subject, agreementId, bodyText, pdfDataUrl, attachments } = req.body;
 
   const sender = process.env.EMAIL_FROM || 'agreements@redflaghomes.in';
-  const onboardingEmail = 'hello@redflaghomes.in';
+  const corporateEmails = ['hello@redflaghomes.in', 'agreements@redflaghomes.in'];
   const emailSubject = subject || `Welcome to Red Flag Homes Network - Signed MOU Executed (${agreementId})`;
   const emailHtml = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 28px; border: 1px solid #27272a; border-radius: 16px; background-color: #09090b; color: #f4f4f5;">
@@ -141,7 +141,20 @@ app.post('/api/email/send', async (req, res) => {
     </div>
   `;
 
-  console.log(`[EMAIL AUTOMATION DISPATCHED] From: ${sender} | To Client: ${recipient} | To Onboarding: ${onboardingEmail} | Subject: ${emailSubject}`);
+  // Construct PDF attachment for email clients
+  const processedAttachments: Array<{ filename: string; content: string; encoding?: string; contentType?: string }> = [];
+  
+  if (pdfDataUrl && typeof pdfDataUrl === 'string' && pdfDataUrl.startsWith('data:application/pdf;base64,')) {
+    const base64Content = pdfDataUrl.replace(/^data:application\/pdf;base64,/, '');
+    processedAttachments.push({
+      filename: `Red_Flag_Homes_Signed_MOU_${agreementId || 'Document'}.pdf`,
+      content: base64Content,
+      encoding: 'base64',
+      contentType: 'application/pdf',
+    });
+  }
+
+  console.log(`[EMAIL AUTOMATION DISPATCHED] From: ${sender} | To Client: ${recipient} | To Corporate: ${corporateEmails.join(', ')} | Subject: ${emailSubject} | Attachments: ${processedAttachments.length}`);
 
   let providerUsed = 'Red Flag Live Delivery Engine';
   let emailDelivered = false;
@@ -155,18 +168,22 @@ app.post('/api/email/send', async (req, res) => {
         to: recipient,
         subject: emailSubject,
         html: emailHtml,
+        attachments: processedAttachments,
       });
 
-      await smtp.sendMail({
-        from: `"Red Flag Homes Automation" <${sender}>`,
-        to: onboardingEmail,
-        subject: `[NEW CLIENT ONBOARDED] Signed MOU ${agreementId}`,
-        html: emailHtml,
-      });
+      for (const corpEmail of corporateEmails) {
+        await smtp.sendMail({
+          from: `"Red Flag Homes Automation" <${sender}>`,
+          to: corpEmail,
+          subject: `[NEW CLIENT ONBOARDED] Signed MOU ${agreementId}`,
+          html: emailHtml,
+          attachments: processedAttachments,
+        });
+      }
 
       providerUsed = 'Direct SMTP Mailer';
       emailDelivered = true;
-      console.log('[SMTP SUCCESS] Real emails dispatched via configured SMTP server');
+      console.log('[SMTP SUCCESS] Real emails & signed MOU PDF dispatched via configured SMTP server');
     } catch (smtpErr) {
       console.error('[SMTP ERROR]', smtpErr);
     }
@@ -175,6 +192,11 @@ app.post('/api/email/send', async (req, res) => {
   // 2. Try Resend API if configured
   if (!emailDelivered && process.env.RESEND_API_KEY && recipient && recipient.includes('@')) {
     try {
+      const resendAttachments = processedAttachments.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+      }));
+
       const clientRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -186,10 +208,11 @@ app.post('/api/email/send', async (req, res) => {
           to: [recipient],
           subject: emailSubject,
           html: emailHtml,
+          attachments: resendAttachments,
         }),
       });
 
-      const onboardingRes = await fetch('https://api.resend.com/emails', {
+      const corpRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -197,13 +220,14 @@ app.post('/api/email/send', async (req, res) => {
         },
         body: JSON.stringify({
           from: `Red Flag Homes Agreements <${sender}>`,
-          to: [onboardingEmail],
+          to: corporateEmails,
           subject: `[NEW CLIENT ONBOARDED] Signed MOU ${agreementId}`,
           html: emailHtml,
+          attachments: resendAttachments,
         }),
       });
 
-      if (clientRes.ok && onboardingRes.ok) {
+      if (clientRes.ok && corpRes.ok) {
         providerUsed = 'Resend API';
         emailDelivered = true;
       }
@@ -213,11 +237,11 @@ app.post('/api/email/send', async (req, res) => {
   }
 
   // 3. Web mailto URI generation for 1-click client email app opening
-  const clientMailtoUrl = `mailto:${encodeURIComponent(recipient || onboardingEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(
+  const clientMailtoUrl = `mailto:${encodeURIComponent(recipient || corporateEmails[0])}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(
     `Welcome to Red Flag Homes!\n\nAgreement ID: ${agreementId}\nCorporate Desk: Guru Marg, Paschim Vihar, New Delhi\nOfficial Sender: agreements@redflaghomes.in\n\nYour executed MOU agreement and audit certificate have been recorded in the Red Flag Homes Executive Portal.`
   )}`;
 
-  const onboardingMailtoUrl = `mailto:${encodeURIComponent(onboardingEmail)}?subject=${encodeURIComponent(`[NEW CLIENT ONBOARDED] Signed MOU ${agreementId}`)}&body=${encodeURIComponent(
+  const onboardingMailtoUrl = `mailto:${encodeURIComponent(corporateEmails.join(','))}?subject=${encodeURIComponent(`[NEW CLIENT ONBOARDED] Signed MOU ${agreementId}`)}&body=${encodeURIComponent(
     `A new property owner has completed digital e-signature and onboarding fee payment.\n\nAgreement ID: ${agreementId}\nClient Email: ${recipient}\nOfficial Desk: agreements@redflaghomes.in`
   )}`;
 
@@ -226,12 +250,12 @@ app.post('/api/email/send', async (req, res) => {
     provider: providerUsed,
     delivered: emailDelivered,
     sender,
-    recipients: [recipient, onboardingEmail],
-    message: `Confirmation email dispatched for ${recipient} & internal alert to ${onboardingEmail}`,
+    recipients: [recipient, ...corporateEmails],
+    message: `Confirmation email dispatched for ${recipient} & internal alert to ${corporateEmails.join(', ')}`,
     mailtoUrl: clientMailtoUrl,
     onboardingMailtoUrl,
     sentAt: new Date().toISOString(),
-    attachments: attachments || ['Signed_MOU_Agreement.pdf', 'Audit_Certificate.pdf'],
+    attachments: processedAttachments.map((a) => a.filename),
   });
 });
 

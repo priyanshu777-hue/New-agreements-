@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   FileSignature,
+  ShieldCheck,
   PenTool,
   MailCheck,
   BarChart3,
@@ -9,7 +10,7 @@ import {
   Bot,
 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'agreements' | 'ai-chat' | 'sign-portal' | 'email-logs' | 'reports';
+export type NavTab = 'dashboard' | 'agreements' | 'audit-logs' | 'ai-chat' | 'sign-portal' | 'email-logs' | 'reports';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -36,6 +37,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
       fullLabel: 'Agreements & Templates',
       icon: FileSignature,
       badge: pendingAgreementsCount > 0 ? pendingAgreementsCount : null,
+    },
+    {
+      id: 'audit-logs' as NavTab,
+      label: 'Audit Logs',
+      fullLabel: 'Client Audit Logs',
+      icon: ShieldCheck,
+      badge: null,
     },
     {
       id: 'ai-chat' as NavTab,

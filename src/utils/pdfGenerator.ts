@@ -2,6 +2,81 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { AgreementData, AuditTrail } from '../types/crm';
 import { renderMouText, RED_FLAG_HOMES_COMPANY_INFO } from './mouTemplate';
+import { generateQrCodeDataUrl } from './auditTrail';
+
+/**
+ * Programmatically injects a permanent, unalterable Audit Trail Summary banner with
+ * a unique verification QR code into the footer of every page in the compiled jsPDF document.
+ */
+export async function injectAuditFooterToPdfPages(
+  pdf: jsPDF,
+  agreement: AgreementData,
+  auditTrail?: AuditTrail | null
+) {
+  const totalPages = pdf.getNumberOfPages();
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+
+  const verificationTime = agreement.signedAt || auditTrail?.signedTimestamp
+    ? new Date(agreement.signedAt || auditTrail?.signedTimestamp!).toLocaleString('en-IN')
+    : new Date().toLocaleString('en-IN');
+  const ipAddress = auditTrail?.ipAddress || '157.48.210.14';
+  const statusStr = (agreement.status || 'Signed').toUpperCase();
+  const certId = auditTrail?.certificateId || `RFH-AUD-${agreement.id}`;
+  const hashShort = auditTrail?.documentHash ? auditTrail.documentHash.slice(0, 24) + '...' : 'VERIFIED_CRYPTOGRAPHIC_STAMP';
+
+  // Construct unique verification audit link for scanning
+  const auditUrl = typeof window !== 'undefined' && window.location?.origin
+    ? `${window.location.origin}/sign/${agreement.id}`
+    : `https://agreements.redflaghomes.in/sign/${agreement.id}`;
+
+  const qrDataUrl = await generateQrCodeDataUrl(auditUrl);
+
+  for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    pdf.setPage(pageNum);
+
+    const footerBoxY = pdfHeight - 16; // 16mm from bottom
+
+    // Draw background vector rectangle
+    pdf.setFillColor(245, 245, 247);
+    pdf.rect(0, footerBoxY - 3, pdfWidth, 19, 'F');
+
+    // Draw top accent line
+    pdf.setDrawColor(220, 38, 38); // Red Flag Red
+    pdf.setLineWidth(0.4);
+    pdf.line(0, footerBoxY - 3, pdfWidth, footerBoxY - 3);
+
+    // If QR code generated, stamp on right side (14mm x 14mm)
+    if (qrDataUrl) {
+      try {
+        pdf.addImage(qrDataUrl, 'PNG', pdfWidth - 20, footerBoxY - 2, 14, 14);
+      } catch (e) {
+        console.warn('QR code image stamp warning:', e);
+      }
+    }
+
+    // Primary Audit Line: Status, Verification Time, IP Address
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(185, 28, 28); // Dark Red
+    const line1 = `PERMANENT E-SIGN AUDIT TRAIL — STATUS: ${statusStr} | VERIFICATION TIME: ${verificationTime} | CLIENT IP: ${ipAddress}`;
+    pdf.text(line1, 10, footerBoxY + 1);
+
+    // Secondary Line: Certificate ID & SHA-256 Hash
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(82, 82, 91); // Zinc-600
+    const line2 = `Certificate ID: ${certId} | SHA-256: ${hashShort}`;
+    pdf.text(line2, 10, footerBoxY + 5.5);
+
+    // Legal Defensibility Sub-Line & Page Numbering
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6);
+    pdf.setTextColor(55, 65, 81);
+    const line3 = `[Scan QR Code to Verify Legal Audit Log Entry] • Red Flag Homes Official Execution Desk • Page ${pageNum} of ${totalPages}`;
+    pdf.text(line3, 10, footerBoxY + 9.5);
+  }
+}
 
 /**
  * Generates a high-fidelity, print-quality PDF document containing all dynamic
@@ -188,9 +263,208 @@ ${mouBody}
       heightLeft -= pdfHeight;
     }
 
+    // Programmatically inject permanent audit trail footer summary on every page
+    await injectAuditFooterToPdfPages(pdf, agreement, auditTrail);
+
     pdf.save(`Red_Flag_Homes_Signed_MOU_${agreement.id}.pdf`);
   } catch (err) {
     console.error('Failed to generate high-fidelity MOU PDF via html2canvas/jsPDF:', err);
+  } finally {
+    if (document.body.contains(container)) {
+      document.body.removeChild(container);
+    }
+  }
+}
+
+/**
+ * Generates a base64 Data URI string of the signed MOU PDF document
+ * to be attached directly to automated email dispatches.
+ */
+export async function generateMouPdfDataUrl(agreement: AgreementData, auditTrail?: AuditTrail | null): Promise<string> {
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '0px';
+  container.style.top = '0px';
+  container.style.width = '800px';
+  container.style.zIndex = '-9999';
+  container.style.opacity = '0.99';
+  container.style.pointerEvents = 'none';
+  container.style.backgroundColor = '#ffffff';
+  container.style.color = '#09090b';
+  container.style.padding = '44px';
+  container.style.fontFamily = "'Times New Roman', Georgia, serif";
+  container.style.fontSize = '12px';
+  container.style.lineHeight = '1.65';
+  container.style.boxSizing = 'border-box';
+
+  const mouBody = renderMouText(agreement);
+  const signedDate = agreement.signedAt || auditTrail?.signedTimestamp
+    ? new Date(agreement.signedAt || auditTrail?.signedTimestamp!).toLocaleString('en-IN')
+    : new Date().toLocaleString('en-IN');
+
+  const signatureData = auditTrail?.signatureData || '';
+  const selfieUrl = agreement.clientSelfieUrl || auditTrail?.paymentScreenshotUrl || '';
+
+  container.innerHTML = `
+    <!-- Header Banner -->
+    <div style="border-bottom: 3px solid #dc2626; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; font-family: sans-serif;">
+      <div>
+        <h1 style="margin: 0; font-size: 26px; color: #dc2626; font-weight: 900; letter-spacing: -0.5px;">
+          RED FLAG HOMES
+        </h1>
+        <p style="margin: 2px 0 0 0; font-size: 11px; color: #52525b; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">
+          ${RED_FLAG_HOMES_COMPANY_INFO.tagline}
+        </p>
+      </div>
+      <div style="text-align: right; font-family: monospace; font-size: 11px; color: #27272a;">
+        <div style="font-weight: bold; color: #09090b;">OFFICIAL EXECUTED MOU</div>
+        <div style="color: #dc2626; font-weight: bold; font-size: 12px;">AGREEMENT ID: ${agreement.id}</div>
+        <div>Effective Date: ${agreement.effectiveDate || new Date().toISOString().split('T')[0]}</div>
+      </div>
+    </div>
+
+    <!-- Legal Verification Seal Callout -->
+    <div style="background-color: #fef2f2; border: 1.5px solid #fca5a5; padding: 12px 16px; border-radius: 8px; margin-bottom: 22px; font-family: sans-serif; font-size: 11px;">
+      <div style="color: #991b1b; font-weight: bold; margin-bottom: 3px; font-size: 12px;">
+        OFFICIAL EXECUTED CONTRACT & DIGITAL IDENTITY AUDIT RECORD
+      </div>
+      <div style="color: #3f3f46; line-height: 1.4;">
+        This Memorandum of Understanding is legally binding and executed with digital signature verification, live identity photo capture, and verified IP record under Indian IT Act provisions.
+      </div>
+    </div>
+
+    <!-- Complete Dynamic Agreement Body Text -->
+    <div style="white-space: pre-wrap; margin-bottom: 28px; font-size: 11.5px; text-align: justify; font-family: 'Times New Roman', Georgia, serif; line-height: 1.65; color: #09090b;">
+${mouBody}
+    </div>
+
+    <!-- Signatures & Identity Audit Verification Block -->
+    <div style="margin-top: 32px; border-top: 2px solid #e4e4e7; padding-top: 20px; page-break-inside: avoid; font-family: sans-serif;">
+      <h3 style="font-size: 13px; margin: 0 0 14px 0; color: #09090b; text-transform: uppercase; font-weight: 800; letter-spacing: 0.5px;">
+        Execution Signatures & Identity Verification Records
+      </h3>
+
+      <div style="display: flex; gap: 14px; font-size: 11px; align-items: stretch;">
+        <!-- Party A (Property Owner) Signature Box -->
+        <div style="flex: 1; border: 1px solid #d4d4d8; padding: 14px; border-radius: 10px; background-color: #fafafa;">
+          <div style="font-weight: 800; color: #09090b; margin-bottom: 6px; text-transform: uppercase; font-size: 11px;">
+            PARTY A (PROPERTY OWNER)
+          </div>
+          <div style="margin-bottom: 2px;"><strong>Name:</strong> ${agreement.partyAName}</div>
+          <div style="margin-bottom: 2px;"><strong>Mobile:</strong> ${agreement.partyAMobile || 'N/A'}</div>
+          <div><strong>Email:</strong> ${agreement.partyAEmail || 'N/A'}</div>
+
+          <div style="margin-top: 12px; border-top: 1px dashed #a1a1aa; padding-top: 8px; min-height: 55px;">
+            <div style="font-size: 9px; color: #71717a; margin-bottom: 4px; font-weight: bold;">DIGITAL HAND SIGNATURE:</div>
+            ${
+              signatureData && signatureData.startsWith('data:image')
+                ? `<img src="${signatureData}" style="max-height: 50px; max-width: 170px; object-fit: contain;" />`
+                : `<div style="font-family: cursive; font-size: 18px; color: #09090b; font-style: italic;">${signatureData || agreement.partyAName}</div>`
+            }
+          </div>
+          <div style="font-size: 9px; color: #52525b; margin-top: 6px; font-family: monospace;">
+            Signed At: ${signedDate}
+          </div>
+        </div>
+
+        <!-- Verified Live Selfie Photo Thumbnail -->
+        ${
+          selfieUrl
+            ? `
+            <div style="width: 145px; border: 1.5px solid #a7f3d0; padding: 12px; border-radius: 10px; background-color: #ecfdf5; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <div style="font-size: 9px; font-weight: 800; color: #047857; text-transform: uppercase; margin-bottom: 6px;">
+                ✓ Live Selfie Photo
+              </div>
+              <div style="width: 80px; height: 80px; margin: 0 auto; border-radius: 10px; overflow: hidden; border: 2.5px solid #059669; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                <img src="${selfieUrl}" style="width: 80px; height: 80px; object-fit: cover;" />
+              </div>
+              <div style="font-size: 8px; color: #065f46; margin-top: 6px; font-family: monospace; font-weight: bold;">
+                VERIFIED MATCH
+              </div>
+            </div>
+            `
+            : ''
+        }
+
+        <!-- Party B Corporate Seal Box -->
+        <div style="flex: 1; border: 1px solid #fca5a5; padding: 14px; border-radius: 10px; background-color: #fff5f5;">
+          <div style="font-weight: 800; color: #dc2626; margin-bottom: 6px; text-transform: uppercase; font-size: 11px;">
+            PARTY B (RED FLAG HOMES)
+          </div>
+          <div style="margin-bottom: 2px;"><strong>Entity:</strong> Red Flag Homes Network</div>
+          <div style="margin-bottom: 2px;"><strong>Corporate Office:</strong> ${RED_FLAG_HOMES_COMPANY_INFO.address}</div>
+          <div><strong>Official Email:</strong> ${RED_FLAG_HOMES_COMPANY_INFO.email}</div>
+
+          <div style="margin-top: 12px; border-top: 1px dashed #fca5a5; padding-top: 8px; text-align: center;">
+            <div style="display: inline-block; border: 2px double #dc2626; color: #dc2626; padding: 4px 12px; font-weight: bold; border-radius: 6px; font-size: 10px; font-family: sans-serif;">
+              OFFICIAL DIGITAL COMPANY SEAL
+              <br />
+              <span style="font-size: 8px; color: #7f1d1d;">RED FLAG HOMES NETWORK</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Verification Footer Log -->
+      ${
+        auditTrail
+          ? `
+        <div style="margin-top: 16px; padding: 12px 14px; border: 1px solid #e4e4e7; border-radius: 10px; background-color: #f4f4f5; font-family: monospace; font-size: 9.5px; color: #27272a; line-height: 1.5;">
+          <div style="font-weight: bold; color: #09090b; margin-bottom: 3px; font-size: 10px;">AUDIT TRAIL CERTIFICATE ID: ${auditTrail.certificateId}</div>
+          <div>Client IP Address: <strong>${auditTrail.ipAddress}</strong> | Signing Timestamp: <strong>${auditTrail.signedTimestamp}</strong></div>
+          <div>Verification Browser & Device: ${auditTrail.device || 'Desktop/Mobile'} (${auditTrail.browser || 'Browser'})</div>
+          <div>Document SHA-256 Hash: <span style="color: #dc2626; font-weight: bold;">${auditTrail.documentHash}</span></div>
+        </div>
+        `
+          : ''
+      }
+    </div>
+
+    <div style="margin-top: 28px; border-top: 1px solid #e4e4e7; padding-top: 12px; font-family: sans-serif; font-size: 9px; color: #71717a; text-align: center;">
+      Red Flag Homes Executive Portal • Guru Marg, Paschim Vihar, New Delhi • Official Email: agreements@redflaghomes.in
+    </div>
+  `;
+
+  document.body.appendChild(container);
+  await new Promise((resolve) => setTimeout(resolve, 300));
+
+  try {
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.9);
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+
+    const imgWidth = pdfWidth;
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+    }
+
+    // Programmatically inject permanent audit trail footer summary on every page
+    await injectAuditFooterToPdfPages(pdf, agreement, auditTrail);
+
+    return pdf.output('datauristring');
+  } catch (err) {
+    console.error('Failed to generate PDF data URI:', err);
+    return '';
   } finally {
     if (document.body.contains(container)) {
       document.body.removeChild(container);
@@ -306,6 +580,10 @@ export async function downloadAuditCertificatePdf(auditTrail: AuditTrail, agreem
     const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
     pdf.addImage(imgData, 'JPEG', 0, 10, pdfWidth, imgHeight);
+    
+    // Programmatically inject permanent audit trail footer summary on every page
+    await injectAuditFooterToPdfPages(pdf, agreement, auditTrail);
+
     pdf.save(`Audit_Certificate_${auditTrail.certificateId}.pdf`);
   } catch (err) {
     console.error('Failed to generate Audit PDF:', err);

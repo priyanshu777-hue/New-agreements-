@@ -34,17 +34,19 @@ export const OFFICIAL_PAYMENT_QR_URL =
 import { AgreementData, AuditTrail, AssetDetail } from '../../types/crm';
 import { renderMouText } from '../../utils/mouTemplate';
 import { createAuditCertificate, getClientIp, generateQrCodeDataUrl } from '../../utils/auditTrail';
-import { downloadMouPdf, downloadAuditCertificatePdf } from '../../utils/pdfGenerator';
+import { downloadMouPdf, downloadAuditCertificatePdf, generateMouPdfDataUrl } from '../../utils/pdfGenerator';
 import { RedFlagLogo, DigitalCompanySeal, DocumentAuditStamp } from '../common/RedFlagLogo';
 
 interface PublicSigningPortalProps {
   agreement: AgreementData;
+  onUpdateAgreement?: (updatedAgreement: AgreementData) => void;
   onCompleteSigning: (signedAgreement: AgreementData, auditTrail: AuditTrail) => void;
   onBackToCRM?: () => void;
 }
 
 export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
   agreement: initialAgreement,
+  onUpdateAgreement,
   onCompleteSigning,
   onBackToCRM,
 }) => {
@@ -147,13 +149,21 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
 
     // Official UPI Payment QR parameters for RED FLAG MEDIA
     const upiUri = `upi://pay?pa=red.media@superyes&pn=RED%20FLAG%20MEDIA&cu=INR&tn=Onboarding%20Fee%20MOU%20${agreement.id}`;
-    // If needed as a dynamic fallback:
     if (!OFFICIAL_PAYMENT_QR_URL) {
       generateQrCodeDataUrl(upiUri).then(setPaymentQrCodeUrl);
     }
 
     getClientIp().then(setClientIp);
-  }, [agreement]);
+
+    // Update real-time CRM stage tracking to "Viewed" if link was just opened by client
+    if (agreement.status === 'Inactive' || agreement.status === 'Awaiting Signature') {
+      const viewedAgr: AgreementData = { ...agreement, status: 'Viewed' };
+      setAgreement(viewedAgr);
+      if (onUpdateAgreement) {
+        onUpdateAgreement(viewedAgr);
+      }
+    }
+  }, [agreement.id]);
 
   const clearCanvas = () => {
     if (sigCanvasRef.current) {
@@ -343,6 +353,9 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
       status: 'Viewed',
     };
     setAgreement(updatedAgr);
+    if (onUpdateAgreement) {
+      onUpdateAgreement(updatedAgr);
+    }
     setTypedName(clientName);
     setStep('selfie');
   };
@@ -536,6 +549,9 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
 
     setFinalAuditTrail(audit);
     setAgreement(updatedAgreement);
+    if (onUpdateAgreement) {
+      onUpdateAgreement(updatedAgreement);
+    }
     setStep('completed');
     setIsSuccessModalOpen(true);
 
@@ -552,15 +568,24 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
 
     onCompleteSigning(updatedAgreement, audit);
 
-    // Send emails from agreements@redflaghomes.in
+    // Generate base64 PDF of signed MOU for email attachment
+    let pdfDataUrl = '';
+    try {
+      pdfDataUrl = await generateMouPdfDataUrl(updatedAgreement, audit);
+    } catch (pdfErr) {
+      console.warn('PDF data URL generation warning:', pdfErr);
+    }
+
+    // Send emails from agreements@redflaghomes.in to client & corporate
     fetch('/api/email/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recipient: clientEmail || agreement.salesExecutiveEmail,
+        recipient: clientEmail || agreement.partyAEmail || agreement.salesExecutiveEmail,
         subject: `Welcome to Red Flag Homes! Executed MOU - ${agreement.title}`,
         agreementId: agreement.id,
-        bodyText: `Welcome ${clientName}! Your Memorandum of Understanding has been successfully executed with Red Flag Homes. Payment Transaction ID: ${paymentTxId || 'Verified'}. Verified audit stamp & digital company seal applied.`,
+        bodyText: `Welcome ${clientName || agreement.partyAName}! Your Memorandum of Understanding has been successfully executed with Red Flag Homes. Payment Transaction ID: ${paymentTxId || 'Verified'}. Verified audit stamp & digital company seal applied.`,
+        pdfDataUrl,
         attachments: ['Signed_MOU_Agreement.pdf', 'Audit_Certificate.pdf'],
       }),
     })
@@ -993,7 +1018,18 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
             </div>
 
             <button
-              onClick={() => setStep('payment')}
+              onClick={() => {
+                const selfieUpdated: AgreementData = {
+                  ...agreement,
+                  clientSelfieUrl: selfieUrl || undefined,
+                  status: 'Selfie Verified',
+                };
+                setAgreement(selfieUpdated);
+                if (onUpdateAgreement) {
+                  onUpdateAgreement(selfieUpdated);
+                }
+                setStep('payment');
+              }}
               disabled={!selfieUrl}
               className={`w-full py-3.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all min-h-[48px] ${
                 selfieUrl
@@ -1112,6 +1148,16 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
                   return;
                 }
                 setPaymentError('');
+                const paymentUpdated: AgreementData = {
+                  ...agreement,
+                  paymentTransactionId: paymentTxId,
+                  paymentScreenshotUrl: paymentScreenshotUrl || undefined,
+                  status: 'Payment Submitted',
+                };
+                setAgreement(paymentUpdated);
+                if (onUpdateAgreement) {
+                  onUpdateAgreement(paymentUpdated);
+                }
                 setStep('review');
               }}
               className="space-y-4"

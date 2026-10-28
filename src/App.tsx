@@ -9,6 +9,7 @@ import { AgreementList } from './components/agreements/AgreementList';
 import { PublicSigningPortal } from './components/signing/PublicSigningPortal';
 import { ReportsView } from './components/reports/ReportsView';
 import { EmailLogsView } from './components/email/EmailLogsView';
+import { AuditLogsView } from './components/audit/AuditLogsView';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { GlobalSearchModal } from './components/common/GlobalSearchModal';
 import { TemplateChatbot } from './components/chat/TemplateChatbot';
@@ -161,27 +162,49 @@ export default function App() {
     setNotifications([newNotif, ...notifications]);
   };
 
-  // E-Signature Completion Handler
-  const handleCompleteSigning = (signedAgr: AgreementData, auditTrail: AuditTrail) => {
-    const updatedAgreements = agreements.map((a) => (a.id === signedAgr.id ? signedAgr : a));
-    setAgreements(updatedAgreements);
-    setSigningAgreement(signedAgr);
+  // E-Signature Completion & Stage Update Handlers
+  const handleUpdateAgreement = (updatedAgr: AgreementData) => {
+    setAgreements((prev) => {
+      const exists = prev.some((a) => a.id.trim().toLowerCase() === updatedAgr.id.trim().toLowerCase());
+      const next = exists
+        ? prev.map((a) => (a.id.trim().toLowerCase() === updatedAgr.id.trim().toLowerCase() ? updatedAgr : a))
+        : [updatedAgr, ...prev];
+      localStorage.setItem('rfh_agreements', JSON.stringify(next));
+      return next;
+    });
 
-    // Also update associated lead stage to "Signed" or "Onboarded"
-    if (signedAgr.leadId) {
-      setLeads((prev) =>
-        prev.map((l) => (l.id === signedAgr.leadId ? { ...l, stage: 'Signed' } : l))
-      );
-    }
+    setSigningAgreement(updatedAgr);
+
+    // Sync associated lead stage in real-time
+    setLeads((prevLeads) => {
+      const nextLeads = prevLeads.map((l) => {
+        const isMatch =
+          l.id === updatedAgr.leadId ||
+          (l.email && updatedAgr.partyAEmail && l.email.trim().toLowerCase() === updatedAgr.partyAEmail.trim().toLowerCase()) ||
+          (l.fullName && updatedAgr.partyAName && l.fullName.trim().toLowerCase() === updatedAgr.partyAName.trim().toLowerCase());
+        if (isMatch) {
+          const newStage = updatedAgr.status === 'Signed' ? 'Signed' : (updatedAgr.status as any);
+          return { ...l, stage: newStage };
+        }
+        return l;
+      });
+      localStorage.setItem('rfh_leads', JSON.stringify(nextLeads));
+      return nextLeads;
+    });
+  };
+
+  const handleCompleteSigning = (signedAgr: AgreementData, auditTrail: AuditTrail) => {
+    const strictlySigned: AgreementData = { ...signedAgr, status: 'Signed' };
+    handleUpdateAgreement(strictlySigned);
 
     // Email Logs
     const clientEmailLog: EmailLog = {
       id: `email_${Date.now()}`,
       sender: 'agreements@redflaghomes.in',
-      recipient: signedAgr.partyAEmail || signedAgr.partyAName,
+      recipient: strictlySigned.partyAEmail || strictlySigned.partyAName,
       recipientType: 'Client',
-      subject: `Welcome to Red Flag Homes! Signed MOU Executed - ${signedAgr.title}`,
-      agreementId: signedAgr.id,
+      subject: `Welcome to Red Flag Homes! Signed MOU Executed - ${strictlySigned.title}`,
+      agreementId: strictlySigned.id,
       status: 'Delivered',
       sentAt: new Date().toISOString(),
       attachments: ['Signed_MOU_Agreement.pdf', `Audit_Certificate_${auditTrail.certificateId}.pdf`],
@@ -190,10 +213,10 @@ export default function App() {
     const onboardingEmailLog: EmailLog = {
       id: `email_onboarding_${Date.now()}`,
       sender: 'agreements@redflaghomes.in',
-      recipient: 'hello@redflaghomes.in',
+      recipient: 'hello@redflaghomes.in, agreements@redflaghomes.in',
       recipientType: 'Internal Onboarding',
-      subject: `[NEW CLIENT ONBOARDED] Signed MOU ${signedAgr.id} - ${signedAgr.partyAName}`,
-      agreementId: signedAgr.id,
+      subject: `[NEW CLIENT ONBOARDED] Signed MOU ${strictlySigned.id} - ${strictlySigned.partyAName}`,
+      agreementId: strictlySigned.id,
       status: 'Delivered',
       sentAt: new Date().toISOString(),
       attachments: ['Signed_MOU_Agreement.pdf', `Audit_Certificate_${auditTrail.certificateId}.pdf`],
@@ -204,10 +227,10 @@ export default function App() {
     const notif: SystemNotification = {
       id: `notif_${Date.now()}`,
       title: 'New Client Onboarded!',
-      message: `${signedAgr.partyAName} signed MOU ${signedAgr.id}. Automated welcome email sent.`,
+      message: `${strictlySigned.partyAName} signed MOU ${strictlySigned.id}. Automated welcome email sent with PDF attachment.`,
       timestamp: new Date().toISOString(),
       type: 'signed',
-      agreementId: signedAgr.id,
+      agreementId: strictlySigned.id,
       read: false,
     };
     setNotifications((prev) => [notif, ...prev]);
@@ -266,6 +289,7 @@ export default function App() {
     return (
       <PublicSigningPortal
         agreement={signingAgreement}
+        onUpdateAgreement={handleUpdateAgreement}
         onCompleteSigning={handleCompleteSigning}
         onBackToCRM={isAuthenticated ? () => setIsSigningPortalActive(false) : undefined}
       />
@@ -353,6 +377,14 @@ export default function App() {
                 />
               )}
             </div>
+          )}
+
+          {activeTab === 'audit-logs' && (
+            <AuditLogsView
+              agreements={agreements}
+              onSelectAgreement={(a) => setPreviewAgreement(a)}
+              onOpenSigningPortal={handleOpenSigningPortalForAgreement}
+            />
           )}
 
           {activeTab === 'ai-chat' && (

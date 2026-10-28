@@ -69,6 +69,8 @@ export type AgreementStatus =
   | 'Inactive'
   | 'Agreement Sent'
   | 'Viewed'
+  | 'Selfie Verified'
+  | 'Payment Submitted'
   | 'Awaiting Client Details'
   | 'Awaiting Signature'
   | 'Signed'
