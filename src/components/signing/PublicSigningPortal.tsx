@@ -27,6 +27,7 @@ import {
   QrCode,
   X,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 
 export const OFFICIAL_PAYMENT_QR_URL =
@@ -122,7 +123,13 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
   const [completionEmailStatus, setCompletionEmailStatus] = useState<string>('Delivering confirmation email...');
   const [isResendingEmail, setIsResendingEmail] = useState<boolean>(false);
   const [copiedEmailText, setCopiedEmailText] = useState<boolean>(false);
+  const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState<boolean>(false);
+
+  const publicSignUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/sign/${agreement.id}`
+      : `https://agreements.redflaghomes.in/sign/${agreement.id}`;
 
   const displayAudit: AuditTrail =
     finalAuditTrail ||
@@ -1516,6 +1523,77 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
               </div>
             </div>
 
+            {/* Signed Agreement Public Link & Audit QR Preview Card */}
+            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-4 shadow-xl text-left">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4 text-red-500" />
+                  <span className="text-xs font-bold text-white uppercase tracking-wider font-sans">
+                    Signed Agreement Shareable Link & Verification Preview
+                  </span>
+                </div>
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950 px-2.5 py-1 rounded-full border border-emerald-800/60 self-start sm:self-center">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Public Verification Active</span>
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-[11px] font-semibold text-zinc-400">
+                    Live E-Sign & Legal Audit Trail Link:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={publicSignUrl}
+                      className="w-full bg-zinc-900 border border-zinc-800 text-red-400 font-mono text-xs rounded-xl px-3 py-2.5 focus:outline-none select-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(publicSignUrl);
+                        setCopiedLink(true);
+                        setTimeout(() => setCopiedLink(false), 2000);
+                      }}
+                      className="px-3.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 min-h-[42px] transition-all"
+                    >
+                      {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                    </button>
+                    <a
+                      href={publicSignUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-zinc-800 shrink-0 min-h-[42px] flex items-center justify-center transition-colors"
+                      title="Open Signed Link Preview in New Tab"
+                    >
+                      <ExternalLink className="w-4 h-4 text-red-400" />
+                    </a>
+                  </div>
+                </div>
+
+                {qrCodeUrl && (
+                  <div className="flex items-center gap-3 p-2.5 bg-zinc-900 rounded-xl border border-zinc-800">
+                    <img
+                      src={qrCodeUrl}
+                      alt="Verification QR Code"
+                      className="w-14 h-14 bg-white p-1 rounded-lg border border-zinc-700 shrink-0 object-contain"
+                    />
+                    <div className="space-y-0.5 text-[11px]">
+                      <strong className="text-zinc-200 font-mono text-xs block">
+                        Audit Log QR Code
+                      </strong>
+                      <span className="text-zinc-400 text-[10px] block leading-tight">
+                        Scan with phone camera to open audit log entry.
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Confirmation Email Status & 1-Click Mailbox Card */}
             <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-3 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800/80 pb-3">
@@ -1743,6 +1821,43 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
               <div className="flex justify-between items-center">
                 <span>Client IP Address:</span>
                 <strong className="text-zinc-200">{displayAudit.ipAddress}</strong>
+              </div>
+            </div>
+
+            {/* Signed Link Preview Box in Modal */}
+            <div className="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 text-left text-xs space-y-2">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-sans flex items-center justify-between">
+                <span>Signed Agreement Shareable Link</span>
+                <span className="text-emerald-400 font-mono text-[9px]">Live URL</span>
+              </span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={publicSignUrl}
+                  className="w-full bg-zinc-900 border border-zinc-800 text-red-400 font-mono text-xs rounded-xl px-3 py-2 focus:outline-none select-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(publicSignUrl);
+                    setCopiedLink(true);
+                    setTimeout(() => setCopiedLink(false), 2000);
+                  }}
+                  className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1 shrink-0 min-h-[38px] transition-all"
+                >
+                  {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedLink ? 'Copied' : 'Copy'}</span>
+                </button>
+                <a
+                  href={publicSignUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 shrink-0 min-h-[38px] flex items-center justify-center transition-colors"
+                  title="Open Link"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-red-400" />
+                </a>
               </div>
             </div>
 
