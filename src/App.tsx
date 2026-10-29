@@ -14,7 +14,13 @@ import { NotificationDrawer } from './components/notifications/NotificationDrawe
 import { GlobalSearchModal } from './components/common/GlobalSearchModal';
 import { TemplateChatbot } from './components/chat/TemplateChatbot';
 import { LeadDetailDrawer } from './components/leads/LeadDetailDrawer';
+import { DataBackupModal } from './components/modals/DataBackupModal';
 
+import { RedFlagLogo } from './components/common/RedFlagLogo';
+import { AlertCircle, Loader2, Mail, ArrowLeft } from 'lucide-react';
+
+import { getDocs, collection } from 'firebase/firestore';
+import { db } from './lib/firebase';
 import {
   INITIAL_LEADS,
   INITIAL_AGREEMENTS,
@@ -23,6 +29,9 @@ import {
   INITIAL_EMAIL_LOGS,
 } from './data/initialData';
 import { Lead, AgreementData, StaffUser, SystemNotification, EmailLog, AuditTrail } from './types/crm';
+
+const MOCK_LEAD_IDS = ['lead_101', 'lead_102', 'lead_103', 'lead_104', 'lead_105', 'lead_106'];
+const MOCK_AGREEMENT_IDS = ['RFH-MOU-2026-8921', 'RFH-MOU-2026-4412', 'RFH-MOU-2026-1002'];
 
 export default function App() {
   // Check if opening direct public signing link e.g. /sign/RFH-MOU-2026-8921
@@ -45,22 +54,48 @@ export default function App() {
 
   const [leads, setLeads] = useState<Lead[]>(() => {
     const saved = localStorage.getItem('rfh_leads');
-    return saved ? JSON.parse(saved) : INITIAL_LEADS;
+    if (!saved) return INITIAL_LEADS;
+    try {
+      const parsed: Lead[] = JSON.parse(saved);
+      const clean = parsed.filter((l) => l && l.id && !MOCK_LEAD_IDS.includes(l.id));
+      return clean.length > 0 ? clean : INITIAL_LEADS;
+    } catch {
+      return INITIAL_LEADS;
+    }
   });
 
   const [agreements, setAgreements] = useState<AgreementData[]>(() => {
     const saved = localStorage.getItem('rfh_agreements');
-    return saved ? JSON.parse(saved) : INITIAL_AGREEMENTS;
+    if (!saved) return INITIAL_AGREEMENTS;
+    try {
+      const parsed: AgreementData[] = JSON.parse(saved);
+      const clean = parsed.filter((a) => a && a.id && !MOCK_AGREEMENT_IDS.includes(a.id));
+      return clean.length > 0 ? clean : INITIAL_AGREEMENTS;
+    } catch {
+      return INITIAL_AGREEMENTS;
+    }
   });
 
   const [notifications, setNotifications] = useState<SystemNotification[]>(() => {
     const saved = localStorage.getItem('rfh_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
+    if (!saved) return INITIAL_NOTIFICATIONS;
+    try {
+      const parsed: SystemNotification[] = JSON.parse(saved);
+      return parsed.filter((n) => n && n.id);
+    } catch {
+      return INITIAL_NOTIFICATIONS;
+    }
   });
 
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>(() => {
     const saved = localStorage.getItem('rfh_email_logs');
-    return saved ? JSON.parse(saved) : INITIAL_EMAIL_LOGS;
+    if (!saved) return INITIAL_EMAIL_LOGS;
+    try {
+      const parsed: EmailLog[] = JSON.parse(saved);
+      return parsed.filter((e) => e && e.id);
+    } catch {
+      return INITIAL_EMAIL_LOGS;
+    }
   });
 
   // UI Navigation & Selection states
@@ -71,15 +106,233 @@ export default function App() {
   const [previewAgreement, setPreviewAgreement] = useState<AgreementData | null>(null);
 
   const [isSigningPortalActive, setIsSigningPortalActive] = useState<boolean>(isDirectSignLink);
+  const [isDirectLinkLoading, setIsDirectLinkLoading] = useState<boolean>(isDirectSignLink);
+  const [directLinkError, setDirectLinkError] = useState<string | null>(null);
+
   const [signingAgreement, setSigningAgreement] = useState<AgreementData | null>(() => {
     if (directSignAgrId) {
-      return agreements.find((a) => a.id === directSignAgrId) || agreements[0];
+      const cleanId = directSignAgrId.trim().toLowerCase();
+      return agreements.find((a) => a.id.trim().toLowerCase() === cleanId) || null;
     }
-    return agreements[0];
+    return agreements[0] || null;
   });
+
+  // Direct Agreement Lookup Effect for Public Signing Portal Links (/sign/:id)
+  useEffect(() => {
+    if (!isDirectSignLink || !directSignAgrId) return;
+
+    let isMounted = true;
+    const loadDirectAgreement = async () => {
+      setIsDirectLinkLoading(true);
+      setDirectLinkError(null);
+
+      const cleanId = directSignAgrId.trim().toLowerCase();
+
+      // 1. Check if agreement exists in local state first
+      const localMatch = agreements.find((a) => a.id.trim().toLowerCase() === cleanId);
+      if (localMatch) {
+        setSigningAgreement(localMatch);
+      }
+
+      // 2. Fetch specific agreement directly from backend server database store
+      try {
+        const res = await fetch(`/api/agreements/${encodeURIComponent(directSignAgrId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.agreement && isMounted) {
+            setSigningAgreement(data.agreement);
+            setAgreements((prev) => {
+              const exists = prev.some((a) => a.id.trim().toLowerCase() === cleanId);
+              const next = exists
+                ? prev.map((a) => (a.id.trim().toLowerCase() === cleanId ? data.agreement : a))
+                : [data.agreement, ...prev];
+              localStorage.setItem('rfh_agreements', JSON.stringify(next));
+              return next;
+            });
+            setIsDirectLinkLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Direct agreement server fetch warning:', err);
+      }
+
+      if (isMounted) {
+        if (localMatch) {
+          setIsDirectLinkLoading(false);
+        } else {
+          setDirectLinkError(
+            `Agreement "${directSignAgrId}" was not found in the Red Flag Homes Database. Please verify the URL link or contact your sales executive.`
+          );
+          setSigningAgreement(null);
+          setIsDirectLinkLoading(false);
+        }
+      }
+    };
+
+    loadDirectAgreement();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [directSignAgrId, isDirectSignLink]);
 
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+
+  // Server Sync & Real Client Restoration State
+  const [isServerSyncing, setIsServerSyncing] = useState<boolean>(false);
+  const [syncMessage, setSyncMessage] = useState<string>('');
+
+  const fetchAndRestoreServerData = async (manual = false) => {
+    setIsServerSyncing(true);
+    try {
+      let serverAgreements: AgreementData[] = [];
+      let serverLeads: Lead[] = [];
+      let serverNotifs: SystemNotification[] = [];
+      let serverLogs: EmailLog[] = [];
+
+      // 1. Fetch full server database store first
+      try {
+        const res = await fetch('/api/sync/all');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.store) {
+            serverAgreements = data.store.agreements || [];
+            serverLeads = data.store.leads || [];
+            serverNotifs = data.store.notifications || [];
+            serverLogs = data.store.emailLogs || [];
+          }
+        }
+      } catch (err) {
+        console.warn('API sync warning:', err);
+      }
+
+      // 2. Secondary Direct Cloud Firestore SDK fetch fallback to guarantee new devices load records instantly
+      if (serverAgreements.length === 0 || serverLeads.length === 0) {
+        try {
+          const [agrSnap, leadSnap, notifSnap, logSnap] = await Promise.all([
+            getDocs(collection(db, 'agreements')),
+            getDocs(collection(db, 'leads')),
+            getDocs(collection(db, 'notifications')),
+            getDocs(collection(db, 'emailLogs')),
+          ]);
+
+          if (!agrSnap.empty) {
+            serverAgreements = agrSnap.docs.map((d) => d.data() as AgreementData);
+          }
+          if (!leadSnap.empty) {
+            serverLeads = leadSnap.docs.map((d) => d.data() as Lead);
+          }
+          if (!notifSnap.empty) {
+            serverNotifs = notifSnap.docs.map((d) => d.data() as SystemNotification);
+          }
+          if (!logSnap.empty) {
+            serverLogs = logSnap.docs.map((d) => d.data() as EmailLog);
+          }
+        } catch (fsErr) {
+          console.warn('Direct Firestore client sync warning:', fsErr);
+        }
+      }
+
+      // 3. Clean server state from any obsolete mock IDs
+      serverAgreements = serverAgreements.filter((a) => a && a.id && !MOCK_AGREEMENT_IDS.includes(a.id));
+      serverLeads = serverLeads.filter((l) => l && l.id && !MOCK_LEAD_IDS.includes(l.id));
+
+      // 4. Merge server state with current state
+      let mergedAgreements: AgreementData[] = [];
+      setAgreements((prev) => {
+        const map = new Map<string, AgreementData>();
+        serverAgreements.forEach((a) => map.set(a.id.trim().toLowerCase(), a));
+        prev.forEach((a) => {
+          if (!a || !a.id || MOCK_AGREEMENT_IDS.includes(a.id)) return;
+          const key = a.id.trim().toLowerCase();
+          const existing = map.get(key);
+          if (!existing) {
+            map.set(key, a);
+          } else if (existing.status !== 'Signed' && a.status === 'Signed') {
+            map.set(key, a);
+          } else if (existing.status === 'Signed' && a.status !== 'Signed') {
+            // keep existing signed server record
+          } else {
+            map.set(key, { ...existing, ...a });
+          }
+        });
+        mergedAgreements = Array.from(map.values());
+        localStorage.setItem('rfh_agreements', JSON.stringify(mergedAgreements));
+        return mergedAgreements;
+      });
+
+      let mergedLeads: Lead[] = [];
+      setLeads((prev) => {
+        const map = new Map<string, Lead>();
+        serverLeads.forEach((l) => map.set(l.id.trim().toLowerCase(), l));
+        prev.forEach((l) => {
+          if (!l || !l.id || MOCK_LEAD_IDS.includes(l.id)) return;
+          const key = l.id.trim().toLowerCase();
+          const existing = map.get(key);
+          if (!existing) {
+            map.set(key, l);
+          } else {
+            map.set(key, { ...existing, ...l });
+          }
+        });
+        mergedLeads = Array.from(map.values());
+        localStorage.setItem('rfh_leads', JSON.stringify(mergedLeads));
+        return mergedLeads;
+      });
+
+      let mergedNotifs: SystemNotification[] = [];
+      setNotifications((prev) => {
+        const map = new Map<string, SystemNotification>();
+        serverNotifs.forEach((n) => map.set(n.id, n));
+        prev.forEach((n) => {
+          if (n && n.id && !map.has(n.id)) map.set(n.id, n);
+        });
+        mergedNotifs = Array.from(map.values());
+        localStorage.setItem('rfh_notifications', JSON.stringify(mergedNotifs));
+        return mergedNotifs;
+      });
+
+      let mergedLogs: EmailLog[] = [];
+      setEmailLogs((prev) => {
+        const map = new Map<string, EmailLog>();
+        serverLogs.forEach((e) => map.set(e.id, e));
+        prev.forEach((e) => {
+          if (e && e.id && !map.has(e.id)) map.set(e.id, e);
+        });
+        mergedLogs = Array.from(map.values());
+        localStorage.setItem('rfh_email_logs', JSON.stringify(mergedLogs));
+        return mergedLogs;
+      });
+
+      // 5. Push merged state back to server store
+      await fetch('/api/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agreements: mergedAgreements,
+          leads: mergedLeads,
+          notifications: mergedNotifs,
+          emailLogs: mergedLogs,
+        }),
+      });
+
+      if (manual) {
+        setSyncMessage('Database synced across device network!');
+        setTimeout(() => setSyncMessage(''), 3000);
+      }
+    } catch (err) {
+      console.warn('Server restoration error:', err);
+    } finally {
+      setIsServerSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAndRestoreServerData(false);
+  }, []);
 
   // Sync state to localStorage
   useEffect(() => {
@@ -137,18 +390,54 @@ export default function App() {
 
   // MOU Agreement Operations
   const handleGenerateAgreement = (newAgreement: AgreementData) => {
-    setAgreements([newAgreement, ...agreements]);
+    setAgreements((prev) => [newAgreement, ...prev]);
     setIsAgreementGeneratorOpen(false);
     setPreviewAgreement(newAgreement);
 
-    // If generated for a lead, update lead's stage to "Agreement Sent"
-    if (newAgreement.leadId) {
-      setLeads((prevLeads) =>
-        prevLeads.map((l) =>
-          l.id === newAgreement.leadId ? { ...l, stage: 'Agreement Sent' } : l
-        )
+    // Create or update associated lead record for client
+    const assocLead: Lead = {
+      id: newAgreement.leadId || `lead_${Date.now()}`,
+      fullName: newAgreement.partyAName,
+      mobileNumber: newAgreement.partyAMobile || '+91 98000 00000',
+      email: newAgreement.partyAEmail || '',
+      city: newAgreement.place ? newAgreement.place.split(',')[0].trim() : 'New Delhi',
+      propertyAddress: newAgreement.propertyAddress || 'Pending property details',
+      numberOfProperties: 1,
+      expectedRevenue: 350000,
+      source: 'Website',
+      salesExecutiveId: 'usr_1',
+      salesExecutiveName: newAgreement.salesExecutiveName || 'Vikramaditya Roy',
+      stage: newAgreement.status === 'Signed' ? 'Signed' : 'Agreement Sent',
+      whatsappStatus: 'Shared MOU',
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0],
+      agreementId: newAgreement.id,
+      notes: [`Generated agreement ${newAgreement.id} for ${newAgreement.partyAName}.`],
+      documents: [],
+      callHistory: [],
+    };
+
+    setLeads((prev) => {
+      const exists = prev.some(
+        (l) => l.id === assocLead.id || (l.email && assocLead.email && l.email.toLowerCase() === assocLead.email.toLowerCase())
       );
-    }
+      const nextLeads = exists
+        ? prev.map((l) =>
+            l.id === assocLead.id || (l.email && assocLead.email && l.email.toLowerCase() === assocLead.email.toLowerCase())
+              ? { ...l, stage: assocLead.stage, agreementId: newAgreement.id }
+              : l
+          )
+        : [assocLead, ...prev];
+      localStorage.setItem('rfh_leads', JSON.stringify(nextLeads));
+      return nextLeads;
+    });
+
+    // Sync newly generated agreement AND associated lead to server persistent database immediately
+    fetch('/api/agreements/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agreement: newAgreement, lead: assocLead }),
+    }).catch((err) => console.warn('Failed to sync new agreement & lead to server:', err));
 
     const newNotif: SystemNotification = {
       id: `notif_${Date.now()}`,
@@ -159,7 +448,7 @@ export default function App() {
       agreementId: newAgreement.id,
       read: false,
     };
-    setNotifications([newNotif, ...notifications]);
+    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   // E-Signature Completion & Stage Update Handlers
@@ -174,6 +463,13 @@ export default function App() {
     });
 
     setSigningAgreement(updatedAgr);
+
+    // Sync updated agreement directly to backend server database store
+    fetch('/api/agreements/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agreement: updatedAgr }),
+    }).catch((err) => console.warn('Failed to sync updated agreement to server:', err));
 
     // Sync associated lead stage in real-time
     setLeads((prevLeads) => {
@@ -285,7 +581,65 @@ export default function App() {
   };
 
   // Direct public client signing portal view (e.g., /sign/:id)
-  if (isSigningPortalActive && signingAgreement) {
+  if (isSigningPortalActive || isDirectSignLink) {
+    if (isDirectLinkLoading) {
+      return (
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-6 space-y-4">
+          <RedFlagLogo size="lg" />
+          <div className="flex items-center gap-3 text-red-500 bg-zinc-900 px-5 py-3 rounded-2xl border border-zinc-800 shadow-xl">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-xs font-mono font-bold">Verifying & Loading E-Sign Portal...</span>
+          </div>
+        </div>
+      );
+    }
+
+    if (directLinkError || !signingAgreement) {
+      return (
+        <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-6">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-md w-full text-center space-y-5 shadow-2xl relative overflow-hidden">
+            <div className="w-16 h-16 bg-red-950 text-red-500 border border-red-800/80 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold text-red-400 uppercase tracking-widest block">
+                Invalid Signing Link
+              </span>
+              <h2 className="text-xl font-black text-white">Agreement Not Found</h2>
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                {directLinkError || `Agreement ID "${directSignAgrId}" could not be retrieved from the Red Flag Homes Database.`}
+              </p>
+            </div>
+
+            {directSignAgrId && (
+              <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-800 font-mono text-xs text-zinc-400">
+                Requested ID: <span className="text-red-400 font-bold">{directSignAgrId}</span>
+              </div>
+            )}
+
+            <div className="pt-2 space-y-2.5">
+              <a
+                href="/"
+                className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs py-3 rounded-xl shadow-lg transition-all min-h-[44px]"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Return to Red Flag Portal</span>
+              </a>
+
+              <a
+                href={`mailto:agreements@redflaghomes.in?subject=Help with Agreement Link ${directSignAgrId || ''}`}
+                className="w-full flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs py-3 rounded-xl border border-zinc-700 transition-colors min-h-[44px]"
+              >
+                <Mail className="w-4 h-4 text-red-400" />
+                <span>Contact Desk: agreements@redflaghomes.in</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <PublicSigningPortal
         agreement={signingAgreement}
@@ -315,6 +669,10 @@ export default function App() {
         staffList={staffList}
         onUserSelect={(u) => setCurrentUser(u)}
         onSignOut={handleSignOut}
+        onSyncServerData={() => fetchAndRestoreServerData(true)}
+        isSyncing={isServerSyncing}
+        syncMessage={syncMessage}
+        onOpenBackupModal={() => setIsBackupModalOpen(true)}
       />
 
       {/* Main Workspace Body */}
@@ -459,6 +817,16 @@ export default function App() {
           setIsGlobalSearchOpen(false);
           setPreviewAgreement(a);
         }}
+      />
+
+      <DataBackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+        leads={leads}
+        agreements={agreements}
+        emailLogs={emailLogs}
+        notifications={notifications}
+        currentUser={currentUser}
       />
     </div>
   );

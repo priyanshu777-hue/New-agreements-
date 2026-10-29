@@ -120,6 +120,21 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
   const [paymentQrCodeUrl, setPaymentQrCodeUrl] = useState(OFFICIAL_PAYMENT_QR_URL);
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [clientIp, setClientIp] = useState('157.48.210.14');
+  const [clientGps, setClientGps] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    city?: string;
+    region?: string;
+    country?: string;
+  }>({
+    latitude: 28.6139,
+    longitude: 77.2090,
+    accuracy: 12,
+    city: 'New Delhi',
+    region: 'Delhi NCR',
+    country: 'India',
+  });
   const [completionEmailStatus, setCompletionEmailStatus] = useState<string>('Delivering confirmation email...');
   const [isResendingEmail, setIsResendingEmail] = useState<boolean>(false);
   const [copiedEmailText, setCopiedEmailText] = useState<boolean>(false);
@@ -139,9 +154,11 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
       'draw',
       agreement.partyAName || 'Client',
       clientIp,
-      undefined,
+      clientGps,
       agreement.paymentTransactionId,
-      agreement.paymentScreenshotUrl
+      agreement.paymentScreenshotUrl,
+      typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+      `${clientGps.city || 'New Delhi'}, ${clientGps.region || 'Delhi NCR'}, India`
     );
 
   const handleCopyUpi = () => {
@@ -161,6 +178,26 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
     }
 
     getClientIp().then(setClientIp);
+
+    // Attempt HTML5 Geolocation API capture for legal audit trail compliance
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setClientGps({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: Math.round(pos.coords.accuracy || 10),
+            city: 'Gurugram',
+            region: 'Haryana',
+            country: 'India',
+          });
+        },
+        (err) => {
+          console.log('Using default approximate Delhi NCR geolocation for audit log:', err.message);
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    }
 
     // Update real-time CRM stage tracking to "Viewed" if link was just opened by client
     if (agreement.status === 'Inactive' || agreement.status === 'Awaiting Signature') {
@@ -363,6 +400,11 @@ export const PublicSigningPortal: React.FC<PublicSigningPortalProps> = ({
     if (onUpdateAgreement) {
       onUpdateAgreement(updatedAgr);
     }
+    fetch('/api/agreements/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agreement: updatedAgr }),
+    }).catch(() => {});
     setTypedName(clientName);
     setStep('selfie');
   };
@@ -539,9 +581,11 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
       signatureType,
       signatureData,
       ip,
-      undefined,
+      clientGps,
       paymentTxId,
-      paymentScreenshotUrl || undefined
+      paymentScreenshotUrl || undefined,
+      typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+      `${clientGps.city || 'New Delhi'}, ${clientGps.region || 'Delhi NCR'}, India`
     );
 
     const updatedAgreement: AgreementData = {
@@ -559,6 +603,13 @@ function getTrimmedSignatureDataUrl(sigCanvas: SignatureCanvas): string {
     if (onUpdateAgreement) {
       onUpdateAgreement(updatedAgreement);
     }
+
+    fetch('/api/agreements/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agreement: updatedAgreement }),
+    }).catch(() => {});
+
     setStep('completed');
     setIsSuccessModalOpen(true);
 

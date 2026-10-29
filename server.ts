@@ -6,6 +6,15 @@ import { fileURLToPath } from 'url';
 import nodemailer from 'nodemailer';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
+import {
+  loadFirestoreStore,
+  saveAgreementToFirestore,
+  saveLeadToFirestore,
+  saveNotificationToFirestore,
+  saveEmailLogToFirestore,
+  getAgreementFromFirestore,
+  ServerStore,
+} from './src/lib/firestoreStore.ts';
 
 dotenv.config();
 
@@ -18,21 +27,274 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '10mb' }));
 
+const DEFAULT_SEED_STORE: ServerStore = {
+  agreements: [
+    {
+      id: 'RFH-MOU-2026-9812',
+      leadId: 'lead_107',
+      templateType: 'mou',
+      title: 'Listing & Property Management MOU - Vasant Kunj Farmhouse Villa',
+      partyAName: 'Md Ahmar',
+      partyAEmail: 'md.ahmar@gmail.com',
+      partyAMobile: '+91 98100 99887',
+      propertyAddress: 'Villa 18, Vasant Kunj Farms, New Delhi - 110070',
+      effectiveDate: '2026-10-28',
+      place: 'New Delhi, India',
+      commissionPercent: 17,
+      ownerPercent: 83,
+      coHostPercent: 17,
+      occupancyTarget: '65%–75%',
+      noticePeriod: '15 days',
+      lockInPeriod: '6 months',
+      salesExecutiveName: 'Vikramaditya Roy',
+      salesExecutiveMobile: '+91 98100 11223',
+      salesExecutiveEmail: 'vikram@redflaghomes.com',
+      partyABankDetails: {
+        accountName: 'Md Ahmar',
+        accountNumber: '50100239102931',
+        ifscCode: 'ICIC0000104',
+        bankName: 'ICICI Bank Ltd, Vasant Kunj Branch',
+      },
+      partyAGovtIdNumber: '5412-8901-3344',
+      status: 'Signed',
+      sentAt: '2026-10-28T10:00:00Z',
+      viewedAt: '2026-10-28T10:15:00Z',
+      signedAt: '2026-10-28T18:20:00Z',
+      publicSignUrl: '/sign/RFH-MOU-2026-9812',
+      auditTrail: {
+        signedTimestamp: '2026-10-28T18:20:00.000Z',
+        ipAddress: '103.211.54.18',
+        browser: 'Chrome 130.0 (Android)',
+        device: 'Samsung Galaxy S24 Ultra (Mobile)',
+        gpsCoordinates: { latitude: 28.5244, longitude: 77.1588, accuracy: 8 },
+        documentHash: 'd41d8cd98f00b204e9800998ecf8427e998120448a9f4c3b210e9812a149afbf',
+        otpVerifiedAt: '2026-10-28T18:18:30.000Z',
+        otpMethod: 'Mobile OTP',
+        signatureType: 'draw',
+        signatureData: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><path d="M10 35 Q 40 10 90 45 T 180 25" stroke="%23dc2626" stroke-width="3" fill="none"/></svg>',
+        liveSelfiePhoto: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="%231e293b"/><circle cx="50" cy="40" r="18" fill="%2394a3b8"/><path d="M20 85 C20 65 35 58 50 58 C65 58 80 65 80 85 Z" fill="%2394a3b8"/><text x="50" y="94" font-size="8" fill="%2338bdf8" text-anchor="middle">MD AHMAR VERIFIED</text></svg>',
+        certificateId: 'CERT-RFH-2026-9812',
+      },
+    },
+  ],
+  leads: [
+    {
+      id: 'lead_107',
+      fullName: 'Md Ahmar',
+      mobileNumber: '+91 98100 99887',
+      email: 'md.ahmar@gmail.com',
+      city: 'New Delhi',
+      propertyAddress: 'Villa 18, Vasant Kunj Farms, New Delhi - 110070',
+      airbnbUrl: 'https://airbnb.com/rooms/99812044',
+      numberOfProperties: 1,
+      expectedRevenue: 420000,
+      source: 'Website',
+      salesExecutiveId: 'usr_1',
+      salesExecutiveName: 'Vikramaditya Roy',
+      stage: 'Signed',
+      notes: ['Executed MOU signed with Selfie Verification and OTP verification.'],
+      documents: [],
+      whatsappStatus: 'Shared MOU',
+      createdAt: '2026-10-24',
+      updatedAt: '2026-10-28',
+      agreementId: 'RFH-MOU-2026-9812',
+    },
+  ],
+  notifications: [
+    {
+      id: 'notif_ahmar',
+      title: 'Agreement Executed & Signed!',
+      message: 'Md Ahmar digitally signed MOU RFH-MOU-2026-9812. Signed PDF & Audit Certificate generated.',
+      timestamp: '2026-10-28T18:20:00Z',
+      type: 'signed',
+      agreementId: 'RFH-MOU-2026-9812',
+      leadId: 'lead_107',
+      read: false,
+    },
+  ],
+  emailLogs: [
+    {
+      id: 'email_ahmar_client',
+      sender: 'agreements@redflaghomes.in',
+      recipient: 'md.ahmar@gmail.com',
+      recipientType: 'Client',
+      subject: 'Welcome to Red Flag Homes! Executed Copy: Listing Management MOU (Vasant Kunj Farmhouse Villa)',
+      agreementId: 'RFH-MOU-2026-9812',
+      status: 'Delivered',
+      sentAt: '2026-10-28T18:20:30Z',
+      attachments: ['Signed_MOU_RFH-9812.pdf', 'Audit_Certificate_CERT-9812.pdf'],
+    },
+  ],
+};
+
+/**
+ * Get store from Firestore, or seed default data if Firestore is empty
+ */
+async function getOrInitFirestoreStore(): Promise<ServerStore> {
+  let store = await loadFirestoreStore();
+  if (!store.agreements || store.agreements.length === 0) {
+    console.log('[FIRESTORE SEEDING] Initializing Cloud Firestore with seed database records...');
+    for (const agr of DEFAULT_SEED_STORE.agreements) {
+      await saveAgreementToFirestore(agr);
+    }
+    for (const lead of DEFAULT_SEED_STORE.leads) {
+      await saveLeadToFirestore(lead);
+    }
+    for (const notif of DEFAULT_SEED_STORE.notifications) {
+      await saveNotificationToFirestore(notif);
+    }
+    for (const log of DEFAULT_SEED_STORE.emailLogs) {
+      await saveEmailLogToFirestore(log);
+    }
+    store = await loadFirestoreStore();
+  }
+  return store;
+}
+
 // In-memory OTP storage
 const activeOtps = new Map<string, { code: string; expiresAt: number }>();
 
 // API Routes
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const store = await getOrInitFirestoreStore();
   res.json({
     status: 'ok',
     service: 'Red Flag Homes Executive Portal & E-Sign Engine',
     officialEmail: 'agreements@redflaghomes.in',
     onboardingEmail: 'hello@redflaghomes.in',
+    storedAgreements: store.agreements.length,
+    storedLeads: store.leads.length,
+    database: 'Firebase Cloud Firestore',
     timestamp: new Date().toISOString(),
   });
 });
 
-// Send OTP
+// Fetch all persistent server records from Cloud Firestore
+app.get('/api/sync/all', async (req, res) => {
+  const store = await getOrInitFirestoreStore();
+  res.json({ success: true, store });
+});
+
+// Lookup specific agreement by ID from Cloud Firestore
+app.get('/api/agreements/:id', async (req, res) => {
+  const agrId = req.params.id;
+  if (!agrId) {
+    return res.status(400).json({ success: false, error: 'Agreement ID is required' });
+  }
+
+  const cleanId = agrId.trim();
+  // 1. Check direct Firestore lookup
+  let agreement = await getAgreementFromFirestore(cleanId);
+  if (!agreement) {
+    // 2. Case-insensitive lookup in full store
+    const store = await getOrInitFirestoreStore();
+    agreement = store.agreements.find(
+      (a: any) => a.id && a.id.trim().toLowerCase() === cleanId.toLowerCase()
+    );
+  }
+
+  if (agreement) {
+    return res.json({ success: true, agreement });
+  }
+
+  return res.status(404).json({
+    success: false,
+    error: `Agreement with ID '${agrId}' not found in Cloud Firestore database.`,
+  });
+});
+
+// Sync agreement update or signature into Cloud Firestore
+app.post('/api/agreements/sync', async (req, res) => {
+  const { agreement, lead } = req.body;
+  if (!agreement || !agreement.id) {
+    return res.status(400).json({ error: 'Valid agreement data with ID is required' });
+  }
+
+  await saveAgreementToFirestore(agreement);
+
+  if (lead && lead.id) {
+    await saveLeadToFirestore(lead);
+  }
+
+  // Create system notification & email log if signed
+  if (agreement.status === 'Signed') {
+    const notifId = `notif_server_${agreement.id}`;
+    await saveNotificationToFirestore({
+      id: notifId,
+      title: 'Agreement Executed & Signed!',
+      message: `${agreement.partyAName} signed MOU ${agreement.id}. Audit trail & PDF saved in Cloud Firestore.`,
+      timestamp: agreement.signedAt || new Date().toISOString(),
+      type: 'signed',
+      agreementId: agreement.id,
+      leadId: agreement.leadId,
+      read: false,
+    });
+
+    const emailLogId = `email_server_${agreement.id}`;
+    await saveEmailLogToFirestore({
+      id: emailLogId,
+      sender: 'agreements@redflaghomes.in',
+      recipient: agreement.partyAEmail || agreement.partyAName,
+      recipientType: 'Client',
+      subject: `Welcome to Red Flag Homes! Executed Copy: ${agreement.title}`,
+      agreementId: agreement.id,
+      status: 'Delivered',
+      sentAt: agreement.signedAt || new Date().toISOString(),
+      attachments: ['Signed_MOU_Agreement.pdf', 'Audit_Certificate.pdf'],
+    });
+  }
+
+  const store = await getOrInitFirestoreStore();
+  console.log(`[FIRESTORE SYNC SUCCESS] Persistent agreement ${agreement.id} saved for ${agreement.partyAName}`);
+
+  res.json({ success: true, message: `Agreement ${agreement.id} saved to Cloud Firestore`, store });
+});
+
+// Sync lead update into Cloud Firestore
+app.post('/api/leads/sync', async (req, res) => {
+  const { lead } = req.body;
+  if (!lead || !lead.id) {
+    return res.status(400).json({ error: 'Valid lead data with ID is required' });
+  }
+
+  await saveLeadToFirestore(lead);
+  const store = await getOrInitFirestoreStore();
+  res.json({ success: true, message: `Lead ${lead.id} saved to Cloud Firestore`, store });
+});
+
+// Full Restore API to restore or seed records into Cloud Firestore
+app.post('/api/restore', async (req, res) => {
+  const { agreements, leads, notifications, emailLogs } = req.body;
+
+  if (Array.isArray(agreements)) {
+    for (const a of agreements) {
+      await saveAgreementToFirestore(a);
+    }
+  }
+
+  if (Array.isArray(leads)) {
+    for (const l of leads) {
+      await saveLeadToFirestore(l);
+    }
+  }
+
+  if (Array.isArray(notifications)) {
+    for (const n of notifications) {
+      await saveNotificationToFirestore(n);
+    }
+  }
+
+  if (Array.isArray(emailLogs)) {
+    for (const e of emailLogs) {
+      await saveEmailLogToFirestore(e);
+    }
+  }
+
+  const store = await getOrInitFirestoreStore();
+  console.log('[FIRESTORE RESTORE SUCCESS] Database synced into Cloud Firestore');
+  res.json({ success: true, message: 'Cloud Firestore database updated and persisted', store });
+});
+
 app.post('/api/otp/send', (req, res) => {
   const { recipient, method } = req.body;
   if (!recipient) {

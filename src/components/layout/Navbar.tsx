@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, Plus, Shield, Sparkles, ChevronDown, LogOut } from 'lucide-react';
+import { Search, Bell, Plus, Shield, Sparkles, ChevronDown, LogOut, RefreshCw, CheckCircle2, Database, Download } from 'lucide-react';
 import { StaffUser, Role, SystemNotification } from '../../types/crm';
 import { RedFlagLogo } from '../common/RedFlagLogo';
 
@@ -14,6 +14,10 @@ interface NavbarProps {
   staffList: StaffUser[];
   onUserSelect: (user: StaffUser) => void;
   onSignOut?: () => void;
+  onSyncServerData?: () => void;
+  isSyncing?: boolean;
+  syncMessage?: string;
+  onOpenBackupModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -27,6 +31,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   staffList,
   onUserSelect,
   onSignOut,
+  onSyncServerData,
+  isSyncing = false,
+  syncMessage = '',
+  onOpenBackupModal,
 }) => {
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -58,9 +66,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Zone 3: Actions, Notifications, Role Switcher & Sign Out */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {syncMessage && (
+          <span className="hidden xl:inline-flex items-center gap-1.5 text-[11px] font-mono text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800/50 animate-in fade-in">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{syncMessage}</span>
+          </span>
+        )}
+
+        {onSyncServerData && (
+          <button
+            onClick={onSyncServerData}
+            disabled={isSyncing}
+            className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-semibold text-xs px-3 py-2 rounded-xl transition-all shrink-0 min-h-[38px]"
+            title="Restore and synchronize real client submissions directly from server database"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-red-500 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Restore Server Clients'}</span>
+          </button>
+        )}
+
+        {onOpenBackupModal && (
+          <button
+            onClick={onOpenBackupModal}
+            className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white font-semibold text-xs px-3 py-2 rounded-xl transition-all shrink-0 min-h-[38px]"
+            title="Download full CRM data archive, CSV spreadsheets, and legal audit certificates"
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden lg:inline">Legal Backup</span>
+          </button>
+        )}
+
         <button
           onClick={onOpenNewAgreementModal}
-          className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-red-950/50 active:scale-95 shrink-0"
+          className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-md shadow-red-950/50 active:scale-95 shrink-0 min-h-[38px]"
         >
           <Sparkles className="w-3.5 h-3.5" />
           <span>Issue MOU</span>

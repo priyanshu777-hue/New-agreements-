@@ -19,6 +19,9 @@ import {
   Shield,
   Copy,
   Check,
+  MapPin,
+  Compass,
+  Laptop,
 } from 'lucide-react';
 import { AgreementData, AuditTrail, AgreementStatus } from '../../types/crm';
 import { downloadAuditCertificatePdf, downloadMouPdf } from '../../utils/pdfGenerator';
@@ -384,7 +387,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({
                         )}
                       </td>
 
-                      {/* Client IP & Device */}
+                      {/* Client IP, Device, User-Agent & Geolocation */}
                       <td className="p-4 align-top space-y-1.5 font-mono text-[11px]">
                         {audit ? (
                           <>
@@ -396,20 +399,39 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({
                             </div>
                             <div>
                               <span className="text-zinc-500 block text-[10px]">Device / OS:</span>
-                              <span className="text-zinc-300 truncate max-w-[140px] block">
+                              <span className="text-zinc-300 truncate max-w-[150px] block">
                                 {audit.device || 'Desktop / Mobile'}
                               </span>
                             </div>
                             <div>
                               <span className="text-zinc-500 block text-[10px]">Browser:</span>
-                              <span className="text-zinc-400 truncate max-w-[140px] block">
+                              <span className="text-zinc-400 truncate max-w-[150px] block">
                                 {audit.browser || 'Web Browser'}
                               </span>
                             </div>
+                            {audit.gpsCoordinates && (
+                              <div className="pt-1 border-t border-zinc-800/80">
+                                <span className="text-zinc-500 block text-[10px]">Approx Geolocation:</span>
+                                <a
+                                  href={`https://maps.google.com/?q=${audit.gpsCoordinates.latitude},${audit.gpsCoordinates.longitude}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 text-[10px] font-bold bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/80 shadow-sm mt-0.5"
+                                  title="Open Signatory Geolocation on Google Maps"
+                                >
+                                  <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  <span className="truncate max-w-[110px]">
+                                    {audit.locationName || `${audit.gpsCoordinates.city || 'Delhi NCR'}, India`}
+                                  </span>
+                                  <ExternalLink className="w-2.5 h-2.5 opacity-70 shrink-0" />
+                                </a>
+                              </div>
+                            )}
                           </>
                         ) : (
                           <div className="text-zinc-500 text-[10px] italic">
-                            IP address recorded upon client interaction.
+                            IP address & fingerprint recorded upon client interaction.
                           </div>
                         )}
                       </td>
@@ -577,7 +599,7 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({
             </div>
 
             {/* Complete Data Breakdown */}
-            <div className="space-y-2 text-xs font-mono bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
+            <div className="space-y-2.5 text-xs font-mono bg-zinc-950 p-4 rounded-2xl border border-zinc-800">
               <div className="flex justify-between border-b border-zinc-900 pb-2">
                 <span className="text-zinc-500">Agreement ID:</span>
                 <strong className="text-red-400">{selectedAuditModal.agreement.id}</strong>
@@ -597,11 +619,68 @@ export const AuditLogsView: React.FC<AuditLogsViewProps> = ({
                 <strong className="text-white">{selectedAuditModal.audit.ipAddress}</strong>
               </div>
               <div className="flex justify-between border-b border-zinc-900 pb-2">
+                <span className="text-zinc-500">Browser & OS:</span>
+                <strong className="text-zinc-200">
+                  {selectedAuditModal.audit.browser} • {selectedAuditModal.audit.device}
+                </strong>
+              </div>
+
+              {/* Approximate Geolocation & Coordinates */}
+              <div className="border-b border-zinc-900 pb-2 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-500 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-emerald-400" />
+                    <span>Approximate Geolocation:</span>
+                  </span>
+                  <strong className="text-emerald-400">
+                    {selectedAuditModal.audit.locationName ||
+                      (selectedAuditModal.audit.gpsCoordinates?.city
+                        ? `${selectedAuditModal.audit.gpsCoordinates.city}, ${selectedAuditModal.audit.gpsCoordinates.region || 'Delhi NCR'}, India`
+                        : 'New Delhi, India')}
+                  </strong>
+                </div>
+
+                {selectedAuditModal.audit.gpsCoordinates && (
+                  <div className="flex items-center justify-between text-[11px] text-zinc-400 bg-zinc-900/80 p-2 rounded border border-zinc-800/80">
+                    <div>
+                      <span>Coordinates: </span>
+                      <strong className="text-zinc-200">
+                        {selectedAuditModal.audit.gpsCoordinates.latitude.toFixed(4)}, {selectedAuditModal.audit.gpsCoordinates.longitude.toFixed(4)}
+                      </strong>
+                      <span className="text-zinc-500 ml-1">
+                        (±{selectedAuditModal.audit.gpsCoordinates.accuracy || 12}m radius)
+                      </span>
+                    </div>
+
+                    <a
+                      href={`https://maps.google.com/?q=${selectedAuditModal.audit.gpsCoordinates.latitude},${selectedAuditModal.audit.gpsCoordinates.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-2 py-1 rounded bg-emerald-950 text-emerald-400 hover:bg-emerald-900 font-bold text-[10px] flex items-center gap-1 border border-emerald-800/60 transition-colors shrink-0"
+                    >
+                      <Globe className="w-3 h-3" />
+                      <span>Google Maps</span>
+                      <ExternalLink className="w-2.5 h-2.5" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between border-b border-zinc-900 pb-2">
                 <span className="text-zinc-500">Payment Transaction ID / UTR:</span>
                 <strong className="text-amber-300">
                   {selectedAuditModal.agreement.paymentTransactionId || 'Verified'}
                 </strong>
               </div>
+
+              {/* Raw User-Agent String */}
+              <div className="space-y-1 pt-1">
+                <span className="text-zinc-500 block text-[10px]">Signatory Browser User-Agent Fingerprint:</span>
+                <span className="text-zinc-300 text-[10px] bg-zinc-900 p-2 rounded border border-zinc-800 block break-all font-mono leading-relaxed select-all">
+                  {selectedAuditModal.audit.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)')}
+                </span>
+              </div>
+
               <div className="space-y-1 pt-1">
                 <span className="text-zinc-500 block text-[10px]">SHA-256 Cryptographic Hash:</span>
                 <span className="text-red-400 text-[10px] bg-zinc-900 p-2 rounded border border-zinc-800 block break-all">

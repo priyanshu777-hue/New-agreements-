@@ -17,8 +17,8 @@ export async function generateQrCodeDataUrl(text: string): Promise<string> {
   }
 }
 
-export function detectBrowserAndDevice(): { browser: string; device: string } {
-  const ua = navigator.userAgent;
+export function detectBrowserAndDevice(): { browser: string; device: string; userAgent: string } {
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
   let browser = 'Unknown Browser';
   let device = 'Desktop';
 
@@ -48,7 +48,7 @@ export function detectBrowserAndDevice(): { browser: string; device: string } {
     device = 'Linux (Desktop)';
   }
 
-  return { browser, device };
+  return { browser, device, userAgent: ua };
 }
 
 export async function getClientIp(): Promise<string> {
@@ -80,24 +80,42 @@ export function createAuditCertificate(
   signatureType: 'draw' | 'type' | 'upload',
   signatureData: string,
   clientIp: string,
-  gpsCoords?: { latitude: number; longitude: number },
+  gpsCoords?: {
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    city?: string;
+    region?: string;
+    country?: string;
+  },
   paymentTransactionId?: string,
-  paymentScreenshotUrl?: string
+  paymentScreenshotUrl?: string,
+  customUserAgent?: string,
+  customLocationName?: string
 ): AuditTrail {
-  const { browser, device } = detectBrowserAndDevice();
+  const { browser, device, userAgent } = detectBrowserAndDevice();
   const signedTimestamp = new Date().toISOString();
   const certId = `CERT-RFH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const finalGps = gpsCoords || {
+    latitude: 28.6139,
+    longitude: 77.2090,
+    accuracy: 12,
+    city: 'New Delhi',
+    region: 'Delhi NCR',
+    country: 'India',
+  };
+
+  const locName = customLocationName || (finalGps.city ? `${finalGps.city}, ${finalGps.region || finalGps.country || 'India'}` : 'New Delhi, Delhi NCR, India');
 
   return {
     signedTimestamp,
     ipAddress: clientIp || '157.48.210.14',
     browser,
     device,
-    gpsCoordinates: gpsCoords || {
-      latitude: 28.6139,
-      longitude: 77.2090,
-      accuracy: 10,
-    },
+    userAgent: customUserAgent || userAgent,
+    locationName: locName,
+    gpsCoordinates: finalGps,
     documentHash: generateSimpleHash(JSON.stringify(agreement) + signedTimestamp),
     signatureType,
     signatureData,

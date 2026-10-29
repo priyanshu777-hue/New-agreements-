@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "Agreement": {
+      "title": "Agreement",
+      "description": "Memorandum of Understanding or agreement document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "leadId": { "type": "string" },
+        "templateType": { "type": "string" },
+        "title": { "type": "string" },
+        "partyAName": { "type": "string" },
+        "partyAEmail": { "type": "string" },
+        "partyAMobile": { "type": "string" },
+        "propertyAddress": { "type": "string" },
+        "effectiveDate": { "type": "string" },
+        "place": { "type": "string" },
+        "commissionPercent": { "type": "number" },
+        "ownerPercent": { "type": "number" },
+        "coHostPercent": { "type": "number" },
+        "status": { "type": "string" },
+        "sentAt": { "type": "string" },
+        "signedAt": { "type": "string" },
+        "publicSignUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "partyAName", "status"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Property owner lead record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "mobileNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "city": { "type": "string" },
+        "stage": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "fullName", "stage"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "System notification message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "title", "message"]
+    },
+    "EmailLog": {
+      "title": "EmailLog",
+      "description": "Log of dispatched emails",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sender": { "type": "string" },
+        "recipient": { "type": "string" },
+        "subject": { "type": "string" },
+        "status": { "type": "string" },
+        "sentAt": { "type": "string" }
+      },
+      "required": ["id", "sender", "recipient", "subject"]
+    }
+  },
+  "firestore": {
+    "/agreements/{agreementId}": {
+      "schema": { "$ref": "#/entities/Agreement" },
+      "description": "Collection of agreements and MOUs"
+    },
+    "/leads/{leadId}": {
+      "schema": { "$ref": "#/entities/Lead" },
+      "description": "Collection of CRM leads"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Collection of system notifications"
+    },
+    "/emailLogs/{emailLogId}": {
+      "schema": { "$ref": "#/entities/EmailLog" },
+      "description": "Collection of email logs"
+    }
+  }
+}

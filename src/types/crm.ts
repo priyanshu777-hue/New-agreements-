@@ -84,10 +84,15 @@ export interface AuditTrail {
   ipAddress: string;
   browser: string;
   device: string;
+  userAgent?: string;
+  locationName?: string;
   gpsCoordinates?: {
     latitude: number;
     longitude: number;
     accuracy?: number;
+    city?: string;
+    region?: string;
+    country?: string;
   };
   documentHash: string;
   otpVerifiedAt?: string;
@@ -97,6 +102,7 @@ export interface AuditTrail {
   certificateId: string;
   paymentTransactionId?: string;
   paymentScreenshotUrl?: string;
+  liveSelfiePhoto?: string;
 }
 
 export interface AssetDetail {

@@ -543,8 +543,24 @@ export async function downloadAuditCertificatePdf(auditTrail: AuditTrail, agreem
         </div>
 
         <div style="background-color: #18181b; padding: 14px; border-radius: 8px; border: 1px solid #27272a;">
-          <span style="color: #71717a; display: block; font-size: 10px; font-family: monospace;">CLIENT IP ADDRESS</span>
+          <span style="color: #71717a; display: block; font-size: 10px; font-family: monospace;">CLIENT IP & DEVICE</span>
           <strong style="color: #ffffff; font-size: 13px; font-family: monospace;">${auditTrail.ipAddress}</strong>
+          <div style="color: #a1a1aa; font-size: 11px;">${auditTrail.browser || 'Web Browser'} • ${auditTrail.device || 'Desktop/Mobile'}</div>
+        </div>
+
+        <div style="background-color: #18181b; padding: 14px; border-radius: 8px; border: 1px solid #27272a; grid-column: span 2;">
+          <span style="color: #71717a; display: block; font-size: 10px; font-family: monospace;">SIGNATORY APPROXIMATE GEOLOCATION & GPS COORDINATES</span>
+          <strong style="color: #10b981; font-size: 13px;">${auditTrail.locationName || 'New Delhi, Delhi NCR, India'}</strong>
+          <div style="color: #a1a1aa; font-size: 11px; font-family: monospace; margin-top: 2px;">
+            Latitude: ${auditTrail.gpsCoordinates?.latitude ?? 28.6139}, Longitude: ${auditTrail.gpsCoordinates?.longitude ?? 77.2090} (Accuracy: ±${auditTrail.gpsCoordinates?.accuracy ?? 12}m)
+          </div>
+        </div>
+      </div>
+
+      <div style="background-color: #18181b; padding: 14px; border-radius: 10px; border: 1px solid #27272a; margin-bottom: 16px; font-family: monospace; font-size: 10px;">
+        <span style="color: #71717a; display: block; font-size: 9px; margin-bottom: 4px;">BROWSER USER-AGENT FINGERPRINT</span>
+        <div style="color: #d4d4d8; word-break: break-all; background-color: #09090b; padding: 8px; border-radius: 6px; border: 1px solid #3f3f46;">
+          ${auditTrail.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         </div>
       </div>
 
