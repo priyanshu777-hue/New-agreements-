@@ -377,10 +377,20 @@ export default function App() {
 
   // Lead Operations
   const handleUpdateLead = (updatedLead: Lead) => {
-    setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+    setLeads((prev) => {
+      const next = prev.map((l) => (l.id === updatedLead.id ? updatedLead : l));
+      localStorage.setItem('rfh_leads', JSON.stringify(next));
+      return next;
+    });
     if (selectedLeadForDrawer?.id === updatedLead.id) {
       setSelectedLeadForDrawer(updatedLead);
     }
+    // Persist lead changes (including documents) to backend server & Cloud Firestore
+    fetch('/api/leads/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead: updatedLead }),
+    }).catch((err) => console.warn('Failed to sync lead update to server:', err));
   };
 
   const handleDeleteLead = (leadId: string) => {
@@ -783,6 +793,8 @@ export default function App() {
           onUpdateLead={handleUpdateLead}
           onDeleteLead={handleDeleteLead}
           onOpenAgreementForLead={(lead) => handleOpenAgreementGenerator(lead)}
+          agreements={agreements}
+          emailLogs={emailLogs}
         />
       )}
 
