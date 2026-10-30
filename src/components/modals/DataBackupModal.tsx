@@ -17,6 +17,7 @@ import {
 import { Lead, AgreementData, EmailLog, SystemNotification, StaffUser } from '../../types/crm';
 import {
   downloadJsonBackup,
+  exportSnapshotCsv,
   exportLeadsCsv,
   exportAgreementsCsv,
   exportAuditLogsCsv,
@@ -61,6 +62,10 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
         role: currentUser.role,
       }
     );
+  };
+
+  const handleExportSnapshotCsv = () => {
+    exportSnapshotCsv(leads, agreements);
   };
 
   return (
@@ -150,13 +155,22 @@ export const DataBackupModal: React.FC<DataBackupModalProps> = ({
                 </p>
               </div>
 
-              <button
-                onClick={handleDownloadFullJson}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-lg shadow-red-950/80 active:scale-95 shrink-0"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Master JSON</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2.5 w-full sm:w-auto shrink-0">
+                <button
+                  onClick={handleExportSnapshotCsv}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-lg shadow-emerald-950/80 active:scale-95"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-100" />
+                  <span>Export to CSV</span>
+                </button>
+                <button
+                  onClick={handleDownloadFullJson}
+                  className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-3 rounded-xl transition-all shadow-lg shadow-red-950/80 active:scale-95"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Master JSON</span>
+                </button>
+              </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-red-900/30 flex items-center justify-between text-[11px] text-zinc-400 font-mono">

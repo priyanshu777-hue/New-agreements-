@@ -16,6 +16,10 @@ import {
   Square,
   Sparkles,
   Loader2,
+  Clock,
+  XCircle,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { AgreementData, AuditTrail } from '../../types/crm';
 import { renderMouText, RED_FLAG_HOMES_COMPANY_INFO } from '../../utils/mouTemplate';
@@ -28,6 +32,53 @@ interface AgreementListProps {
   onOpenSigningPortal: (agreement: AgreementData) => void;
   onSendEmailReminder: (agreement: AgreementData) => void;
 }
+
+const renderStatusBadge = (status: string) => {
+  const normStatus = (status || '').trim();
+
+  if (normStatus === 'Signed') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 shadow-sm">
+        <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+        <span>Signed</span>
+      </span>
+    );
+  }
+
+  if (normStatus === 'Viewed') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-blue-950/80 text-blue-400 border border-blue-800/60 shadow-sm">
+        <Eye className="w-3.5 h-3.5 text-blue-400" />
+        <span>Viewed</span>
+      </span>
+    );
+  }
+
+  if (normStatus === 'Awaiting Signature' || normStatus === 'Pending' || normStatus === 'Sent') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 shadow-sm">
+        <Clock className="w-3.5 h-3.5 text-amber-400" />
+        <span>Awaiting Signature</span>
+      </span>
+    );
+  }
+
+  if (normStatus === 'Inactive' || normStatus === 'Cancelled' || normStatus === 'Expired') {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-red-950/80 text-red-400 border border-red-800/60 shadow-sm">
+        <XCircle className="w-3.5 h-3.5 text-red-400" />
+        <span>Inactive</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-zinc-900 text-zinc-300 border border-zinc-700/60 shadow-sm">
+      <AlertCircle className="w-3.5 h-3.5 text-zinc-400" />
+      <span>{normStatus}</span>
+    </span>
+  );
+};
 
 export const AgreementList: React.FC<AgreementListProps> = ({
   agreements,
@@ -376,17 +427,24 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto overflow-x-auto scrollbar-none py-1">
-          {['ALL', 'Awaiting Signature', 'Signed', 'Viewed', 'Inactive'].map((st) => (
+          {[
+            { label: 'ALL', dot: 'bg-zinc-400' },
+            { label: 'Awaiting Signature', dot: 'bg-amber-400' },
+            { label: 'Signed', dot: 'bg-emerald-400' },
+            { label: 'Viewed', dot: 'bg-blue-400' },
+            { label: 'Inactive', dot: 'bg-red-400' },
+          ].map((st) => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`min-h-[44px] px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all shrink-0 active:scale-95 ${
-                statusFilter === st
+              key={st.label}
+              onClick={() => setStatusFilter(st.label)}
+              className={`min-h-[44px] px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all shrink-0 active:scale-95 flex items-center gap-2 ${
+                statusFilter === st.label
                   ? 'bg-red-600 text-white shadow font-bold'
                   : 'bg-zinc-950 text-zinc-400 hover:text-white border border-zinc-800'
               }`}
             >
-              {st}
+              {st.label !== 'ALL' && <span className={`w-2 h-2 rounded-full ${st.dot}`} />}
+              <span>{st.label}</span>
             </button>
           ))}
         </div>
@@ -471,18 +529,7 @@ STATUS: OFFICIAL & DIGITALLY EXECUTED
                       <td className="py-3.5 px-4 text-zinc-300">{agr.salesExecutiveName}</td>
 
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold ${
-                            agr.status === 'Signed'
-                              ? 'bg-emerald-950 text-emerald-400 border border-emerald-800/50'
-                              : agr.status === 'Viewed'
-                              ? 'bg-blue-950 text-blue-400 border border-blue-800/50'
-                              : 'bg-amber-950 text-amber-400 border border-amber-800/50'
-                          }`}
-                        >
-                          {agr.status === 'Signed' && <ShieldCheck className="w-3 h-3 text-emerald-400" />}
-                          {agr.status}
-                        </span>
+                        {renderStatusBadge(agr.status)}
                       </td>
 
                       <td className="py-3.5 px-4 text-right">

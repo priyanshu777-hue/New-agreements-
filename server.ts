@@ -16,6 +16,14 @@ import {
   ServerStore,
 } from './src/lib/firestoreStore.ts';
 
+process.on('uncaughtException', (err) => {
+  console.error('[CRITICAL] Uncaught Exception caught (prevented server crash):', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRITICAL] Unhandled Rejection caught (prevented server crash):', reason);
+});
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +34,11 @@ const server = http.createServer(app);
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json({ limit: '10mb' }));
+
+// Lightweight Root & Health probe for Hostinger / Nginx uptime checks
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', service: 'Red Flag Homes Executive Portal', timestamp: new Date().toISOString() });
+});
 
 const DEFAULT_SEED_STORE: ServerStore = {
   agreements: [
@@ -678,9 +691,25 @@ async function startServer() {
       if (req.path.startsWith('/api')) {
         return res.status(404).json({ error: 'API route not found' });
       }
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath, (err) => {
+          if (err && !res.headersSent) {
+            res.status(500).send('Red Flag Homes Executive Portal - Error loading index.html');
+          }
+        });
+      }
+      res.status(200).send('Red Flag Homes Executive Portal Active');
     });
   }
+
+  // Global Express Error Middleware
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('[EXPRESS INTERNAL ERROR]', err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: err?.message || 'Internal Server Error' });
+    }
+  });
 
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Red Flag Homes Portal running on port ${PORT} [Mode: ${isProduction ? 'Production' : 'Development'}]`);

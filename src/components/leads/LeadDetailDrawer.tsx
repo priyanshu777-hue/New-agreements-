@@ -11,6 +11,7 @@ import {
   FileSignature,
 } from 'lucide-react';
 import { Lead, LeadStage, CallLog, LeadDocument } from '../../types/crm';
+import { GooglePickerButton } from '../common/GooglePickerButton';
 
 interface LeadDetailDrawerProps {
   lead: Lead | null;
@@ -97,6 +98,23 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
       url: URL.createObjectURL(file),
       uploadedAt: new Date().toISOString().split('T')[0],
       size: `${(file.size / 1024 / 1024).toFixed(1)} MB`,
+    };
+    const updated = {
+      ...lead,
+      documents: [...lead.documents, newDoc],
+      updatedAt: new Date().toISOString().split('T')[0],
+    };
+    onUpdateLead(updated);
+  };
+
+  const handleGoogleDriveFilePicked = (driveFile: { id: string; name: string; url: string; mimeType: string }) => {
+    const newDoc: LeadDocument = {
+      id: `doc_drive_${Date.now()}`,
+      name: driveFile.name,
+      type: 'Ownership Proof',
+      url: driveFile.url,
+      uploadedAt: new Date().toISOString().split('T')[0],
+      size: 'Google Drive',
     };
     const updated = {
       ...lead,
@@ -357,18 +375,24 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
 
           {activeTab === 'documents' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-xs font-bold text-zinc-300">Uploaded Verification Documents</h3>
-                <label className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold min-h-[44px] px-3.5 py-2 rounded-xl cursor-pointer transition-colors active:scale-95">
-                  <Upload className="w-4 h-4" />
-                  <span>Upload Doc</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={handleDocumentUpload}
-                    accept="image/*,application/pdf"
+                <div className="flex items-center gap-2">
+                  <GooglePickerButton
+                    onFilePicked={handleGoogleDriveFilePicked}
+                    buttonText="Google Drive"
                   />
-                </label>
+                  <label className="flex items-center gap-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold min-h-[44px] px-3.5 py-2 rounded-xl cursor-pointer transition-colors active:scale-95">
+                    <Upload className="w-4 h-4" />
+                    <span>Upload Local</span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleDocumentUpload}
+                      accept="image/*,application/pdf"
+                    />
+                  </label>
+                </div>
               </div>
 
               <div className="space-y-2">

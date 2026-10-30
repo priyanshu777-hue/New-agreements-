@@ -10,7 +10,8 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const firestoreDb = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const dbId = (firebaseConfig as any).firestoreDatabaseId;
+export const firestoreDb = dbId ? getFirestore(app, dbId) : getFirestore(app);
 
 export interface ServerStore {
   agreements: any[];

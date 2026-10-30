@@ -79,6 +79,72 @@ export function downloadJsonBackup(
 }
 
 /**
+ * Export full CRM Snapshot (Leads & Agreements) into a unified offline reporting CSV
+ */
+export function exportSnapshotCsv(leads: Lead[], agreements: AgreementData[]) {
+  const dateSuffix = new Date().toISOString().slice(0, 10);
+  
+  const headers = [
+    'Record Type',
+    'Record ID',
+    'Client / Contact Name',
+    'Mobile Number',
+    'Email Address',
+    'City / Region',
+    'Property / Address',
+    'Stage / Status',
+    'Sales Executive',
+    'Financial / Revenue Terms',
+    'Linked Reference',
+    'Created / Signed Date',
+    'Verification / Source',
+  ];
+
+  const leadRows = leads.map((l) => [
+    'LEAD',
+    l.id,
+    l.fullName,
+    l.mobileNumber,
+    l.email,
+    l.city,
+    l.propertyAddress,
+    l.stage,
+    l.salesExecutiveName,
+    `INR ${l.expectedRevenue.toLocaleString('en-IN')}`,
+    l.agreementId || 'N/A',
+    l.createdAt,
+    l.source,
+  ]);
+
+  const agreementRows = agreements.map((a) => [
+    'AGREEMENT/MOU',
+    a.id,
+    a.partyAName,
+    a.partyAMobile || 'N/A',
+    a.partyAEmail || 'N/A',
+    a.place || 'Delhi NCR',
+    a.propertyAddress,
+    a.status,
+    a.salesExecutiveName,
+    `${a.ownerPercent}% Owner / ${a.commissionPercent}% Red Flag Homes`,
+    a.leadId,
+    a.signedAt || a.effectiveDate || 'Pending',
+    a.auditTrail?.certificateId || a.publicSignUrl,
+  ]);
+
+  const csvContent = [
+    '# RED FLAG HOMES EXECUTIVE CRM SNAPSHOT REPORT',
+    `# Exported At: ${new Date().toISOString()}`,
+    `# Summary: ${leads.length} Leads | ${agreements.length} Agreements/MOUs`,
+    headers.map(escapeCsvValue).join(','),
+    ...leadRows.map((row) => row.map(escapeCsvValue).join(',')),
+    ...agreementRows.map((row) => row.map(escapeCsvValue).join(',')),
+  ].join('\n');
+
+  downloadFile(csvContent, `RedFlagHomes_CRM_Full_Snapshot_${dateSuffix}.csv`, 'text/csv;charset=utf-8;');
+}
+
+/**
  * Export Leads to CSV
  */
 export function exportLeadsCsv(leads: Lead[]) {
